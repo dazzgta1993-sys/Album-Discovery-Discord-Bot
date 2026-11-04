@@ -16,16 +16,24 @@
 <body>
 
   <!-- Top Navigation Header -->
-  <header>
+  <header class="studio-header">
     <div class="brand">
       <div class="brand-logo">💿</div>
       <div>
-        <div class="brand-title">Album Discovery Hub</div>
-        <div class="brand-subtitle">Discord Studio Command Center</div>
+        <div class="brand-title">Album Discovery</div>
+        <div class="brand-subtitle">Discord Studio DJ</div>
       </div>
     </div>
 
-    <div class="nav-center">
+    <!-- Integrated Global Fast-Play Command Bar -->
+    <div class="header-search-dock">
+      <span class="search-dock-icon">⚡</span>
+      <input type="text" id="fastPlayInput" class="header-search-input" placeholder="Search song, artist, paste YouTube or Spotify link..." onkeydown="if(event.key==='Enter') executeFastPlay(true)" />
+      <button class="btn-dock-play" onclick="executeFastPlay(true)" title="Play immediately">▶ Play</button>
+      <button class="btn-dock-queue" onclick="executeFastPlay(false)" title="Add to queue">+ Queue</button>
+    </div>
+
+    <div class="nav-right">
       <select id="serverSelect" class="server-select" onchange="onServerChange()">
         <option value="">Detecting Discord Servers...</option>
       </select>
@@ -33,39 +41,17 @@
         <div class="status-dot"></div>
         <span id="botUserLabel">Connecting...</span>
       </div>
-    </div>
-
-    <div class="nav-right">
       <div class="badge-metric" id="pingBadge">⚡ 0ms</div>
-      <div class="badge-metric" id="uptimeBadge">⏱ 0s</div>
+      <div class="badge-metric" id="uptimeBadge" style="display:none;">⏱ 0s</div>
     </div>
   </header>
 
   <!-- Main Grid -->
   <main>
-    <!-- Command Center Quick Header Bar -->
-    <div class="command-center-header" style="grid-column: 1 / -1;">
-      <div class="command-top-row">
-        <div class="command-status-pills">
-          <div class="cmd-badge live-pulse">
-            <span class="pulse-dot"></span>
-            <span>SYSTEM ACTIVE</span>
-          </div>
-          <div class="cmd-badge" id="cmdDeckStatus">🎛️ Triple-Deck: Active</div>
-          <div class="cmd-badge" id="cmdAudioCodec">🎧 Opus 48kHz HQ</div>
-          <div class="cmd-badge" id="cmdLoopStatus" onclick="cycleLoopMode()" style="cursor:pointer;" title="Click to cycle loop mode">🔁 Loop: Off</div>
-        </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <button class="btn-small" onclick="switchTab('timemachine')" style="background:rgba(157,78,221,0.2); border:1px solid rgba(157,78,221,0.4); color:#c77dff;">⏳ Time Machine</button>
-          <button class="btn-small" onclick="switchTab('radio')" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8;">📻 Cloud Radio</button>
-        </div>
-      </div>
-      <div class="fast-play-bar">
-        <input type="text" id="fastPlayInput" class="fast-play-input" placeholder="⚡ Fast-Play: Search song, artist, album, paste any YouTube / Spotify / Apple link..." onkeydown="if(event.key==='Enter') executeFastPlay(true)" />
-        <button class="btn-small" style="background:var(--accent-purple); color:#fff; font-weight:700; padding:0 16px;" onclick="executeFastPlay(true)">▶ Play Now</button>
-        <button class="btn-small" style="font-weight:700; padding:0 16px;" onclick="executeFastPlay(false)">+ Queue</button>
-      </div>
-    </div>
+    <!-- Hidden compatibility anchors for background JS listeners -->
+    <div style="display:none;" id="cmdDeckStatus">🎛️ Triple-Deck: Active</div>
+    <div style="display:none;" id="cmdAudioCodec">🎧 Opus 48kHz HQ</div>
+    <div style="display:none;" id="cmdLoopStatus" onclick="cycleLoopMode()">🔁 Loop: Off</div>
     <!-- Left Deck: Now Playing & Controls -->
     <div class="card player-deck">
       <div class="voice-status-bar">

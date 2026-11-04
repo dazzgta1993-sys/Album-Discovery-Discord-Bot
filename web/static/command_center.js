@@ -753,9 +753,10 @@ window.renderMusicDnaGraph = function(dna) {
     profileEl.innerText = dna.vibe_description || dna.sonic_profile || "Dynamic Flow";
   }
 
-  // Top artists pills
+  // Top artists pills (Clean curated view: max 8)
   const artistsEl = document.getElementById("dnaTopArtists");
-  const artists = dna.artist_pills || dna.top_artists || [];
+  const rawArtists = dna.artist_pills || dna.top_artists || [];
+  const artists = rawArtists.slice(0, 8);
   if (artistsEl && Array.isArray(artists)) {
     if (artists.length === 0) {
       artistsEl.innerHTML = `<span style="font-size:0.7rem; color:var(--text-muted);">Queue songs to build influence map</span>`;

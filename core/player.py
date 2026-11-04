@@ -634,6 +634,7 @@ class GuildPlayer:
 
                 # Send Now Playing embed
                 await self._send_now_playing_message(next_track)
+                asyncio.create_task(self._update_channel_status_and_message(next_track))
 
             except Exception as e:
                 log.error(f"Error starting playback in {self.guild.name}: {e}")
@@ -766,6 +767,35 @@ class GuildPlayer:
         except Exception as e:
             log.warning(f"Failed to send Now Playing embed: {e}")
 
+    async def _update_channel_status_and_message(self, track: AudioTrack):
+        """Updates Voice Channel Status and sends custom track announcement into the channel."""
+        vc = getattr(self.voice_client, "channel", None)
+        if vc:
+            try:
+                status_text = f"🎶 {track.artist} - {track.title}"[:500]
+                route = discord.http.Route("PUT", "/channels/{channel_id}/voice-status", channel_id=vc.id)
+                await self.bot.http.request(route, json={"status": status_text})
+            except Exception as ex:
+                log.debug(f"Voice status notice: {ex}")
+
+        target_ch = getattr(self, "text_channel", None) or vc
+        if target_ch:
+            try:
+                album_part = f" • *{track.album}*" if track.album else ""
+                await target_ch.send(f"🎶 **Now Playing:** **{track.artist}** — *{track.title}*{album_part}")
+            except Exception as ex:
+                log.debug(f"Track announcement notice: {ex}")
+
+    async def _clear_voice_channel_status(self):
+        """Clears the voice channel status when playback is stopped."""
+        vc = getattr(self.voice_client, "channel", None)
+        if vc:
+            try:
+                route = discord.http.Route("PUT", "/channels/{channel_id}/voice-status", channel_id=vc.id)
+                await self.bot.http.request(route, json={"status": ""})
+            except Exception as ex:
+                log.debug(f"Voice status clear notice: {ex}")
+
     async def update_player_message(self):
         """Live-updates the existing Now Playing deck with fresh title, artwork, queue count, volume, loop, and quality."""
         if not self.current_message or not self.current_track:
@@ -838,6 +868,7 @@ class GuildPlayer:
 
     def stop(self):
         self._is_stopped = True
+        asyncio.create_task(self._clear_voice_channel_status())
         self._suppress_after = True
         self.is_playing = False
         self._cancel_progress_task()

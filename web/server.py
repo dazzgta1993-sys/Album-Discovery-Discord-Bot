@@ -459,6 +459,7 @@ async def api_search(request: web.Request) -> web.Response:
                 })
 
         q_tokens = [t for t in re.findall(r"\w+", q.lower()) if len(t) > 1]
+        generic_descriptors = {"live", "remix", "remixes", "greatest hits", "the best of", "best of", "deluxe", "single", "album"}
         def _score(item):
             art = (item.get("artist") or "").lower()
             tit = (item.get("title") or "").lower()
@@ -471,19 +472,23 @@ async def api_search(request: web.Request) -> web.Response:
             if not is_alb and 0 < dur < 45:
                 return -5000
             score = 0
-            if art == q.lower() or q.lower() in art:
+            if art == q.lower():
+                score += 700
+            elif q.lower() in art:
                 score += 500
-            elif tit == q.lower() or q.lower() in tit:
+            elif tit == q.lower() and q.lower() not in generic_descriptors:
                 score += 450
             elif any(tok in art for tok in q_tokens):
                 score += 250
             elif any(tok in tit for tok in q_tokens):
-                score += 200
+                score += 150
             if is_alb:
-                if art == q.lower() or q.lower() in art or tit == q.lower() or q.lower() in tit:
+                if art == q.lower() or q.lower() in art:
                     score += 350
+                elif tit == q.lower() and q.lower() not in generic_descriptors:
+                    score += 200
                 else:
-                    score -= 300
+                    score -= 400
             if is_junk_album(tit, art):
                 score -= 400
             if item.get("source") in ("deezer", "ytmusic", "apple"):

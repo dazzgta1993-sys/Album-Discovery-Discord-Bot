@@ -779,7 +779,8 @@ async def api_stream(request: web.Request) -> web.StreamResponse:
     if not stream_url and vid:
         s_url, _ = await asyncio.to_thread(stream_service.get_stream_info, vid, "auto")
         stream_url = s_url
-        player.current_track.stream_url = s_url
+        if player.current_track:
+            player.current_track.stream_url = s_url
 
     if not stream_url:
         return web.Response(text="Stream URL unavailable", status=404)

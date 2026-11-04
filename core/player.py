@@ -580,6 +580,9 @@ class GuildPlayer:
                     self._cancel_progress_task()
                     self._active_source = None
                     self.is_playing = False
+                    if getattr(self, "_suppress_after", False):
+                        self._suppress_after = False
+                        return
                     loop = getattr(self.bot, 'loop', None) or asyncio.get_event_loop()
                     if loop and loop.is_running():
                         fut = asyncio.run_coroutine_threadsafe(self.play_next(), loop)
@@ -787,10 +790,19 @@ class GuildPlayer:
         return False
 
     def skip(self) -> bool:
+        now = time.time()
+        if now - getattr(self, "_last_skip_time", 0.0) < 0.6:
+            return False
+        self._last_skip_time = now
         self._cancel_progress_task()
         self._was_manually_skipped = True
         if self.voice_client and (self.voice_client.is_playing() or self.voice_client.is_paused()):
-            self.voice_client.stop()
+            self._suppress_after = True
+            try:
+                self.voice_client.stop()
+            except Exception:
+                pass
+            asyncio.create_task(self.play_next())
             return True
         elif not self.is_playing:
             asyncio.create_task(self.play_next())
@@ -855,8 +867,6 @@ class GuildPlayer:
         profile = record_taste_feedback(self.guild.id, artist, title, vote)
         if vote == "down":
             art_lower = str(artist or "").strip().lower()
-            if self.current_track and str(self.current_track.artist).strip().lower() == art_lower:
-                self.skip()
             if self._prewarmed_autoplay_track and str(self._prewarmed_autoplay_track.artist).strip().lower() == art_lower:
                 self._prewarmed_autoplay_track = None
                 self._prewarm_task = None

@@ -571,6 +571,10 @@ function togglePlayPause() {
 
 function skipTrack() {
   if (!currentGuildId) return;
+  if (window._skipDebounce && Date.now() - window._skipDebounce < 800) {
+    return;
+  }
+  window._skipDebounce = Date.now();
   const monAudio = document.getElementById("browserMonitorAudio");
   if (monAudio) { monAudio.pause(); monAudio.removeAttribute("src"); }
   window._isSkipping = true;
@@ -589,9 +593,7 @@ function skipTrack() {
   lastPollTimestamp = performance.now();
   renderSeeker();
   sendControl("skip");
-  setTimeout(() => pollGuildState(currentGuildId), 250);
-  setTimeout(() => pollGuildState(currentGuildId), 600);
-  setTimeout(() => pollGuildState(currentGuildId), 1200);
+  setTimeout(() => pollGuildState(currentGuildId), 400);
 }
 
 async function sendControl(action, value = null) {

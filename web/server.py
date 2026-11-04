@@ -3,6 +3,7 @@ Runs embedded inside the bot's asyncio event loop using aiohttp.web.
 """
 import asyncio
 import os
+import re
 import time
 from typing import Optional
 from aiohttp import web
@@ -433,34 +434,71 @@ async def api_search(request: web.Request) -> web.Response:
             asyncio.to_thread(stream_service.search_soundcloud_tracks, q, limit=4),
             return_exceptions=True
         )
+        from app.utils.normalizer import is_junk_album
+        raw_candidates = []
         for a in (t_albs if isinstance(t_albs, list) else []):
-            results.append({
+            raw_candidates.append({
                 "id": str(a.get("id")), "title": a.get("title", "Unknown Album"),
                 "artist": a.get("artist", "Unknown Artist"), "cover": a.get("cover") or "",
                 "tracks_count": a.get("tracks_count", 0), "record_type": (a.get("record_type") or "Album").title(),
-                "is_album": True, "source": "deezer"
+                "is_album": True, "source": "deezer", "duration_seconds": 0
             })
         dz_items = t_dz if isinstance(t_dz, list) else []
         yt_items = t_yt if isinstance(t_yt, list) else []
         it_items = t_it if isinstance(t_it, list) else []
         sc_items = t_sc if isinstance(t_sc, list) else []
+        for items_list, src_name in ((dz_items, "deezer"), (yt_items, "ytmusic"), (it_items, "apple"), (sc_items, "soundcloud")):
+            for it in items_list:
+                dur = int(it.get("duration_seconds") or it.get("duration") or 0)
+                raw_candidates.append({
+                    "title": it.get("title", "Unknown"), "artist": it.get("artist", "Unknown"),
+                    "album": it.get("album", ""), "duration": AudioTrack._format_duration(dur),
+                    "duration_seconds": dur, "cover": it.get("cover") or it.get("cover_medium") or "",
+                    "video_id": it.get("video_id") or it.get("url") or it.get("id", ""),
+                    "source": src_name, "is_official": src_name in ("deezer", "ytmusic", "apple"), "is_album": False
+                })
+
+        q_tokens = [t for t in re.findall(r"\w+", q.lower()) if len(t) > 1]
+        def _score(item):
+            art = (item.get("artist") or "").lower()
+            tit = (item.get("title") or "").lower()
+            alb = (item.get("album") or "").lower()
+            full = f"{art} - {tit} {alb}"
+            dur = item.get("duration_seconds", 0)
+            is_alb = item.get("is_album", False)
+            if q_tokens and not any(tok in full for tok in q_tokens):
+                return -9999
+            if not is_alb and 0 < dur < 45:
+                return -5000
+            score = 0
+            if art == q.lower() or q.lower() in art:
+                score += 500
+            elif tit == q.lower() or q.lower() in tit:
+                score += 450
+            elif any(tok in art for tok in q_tokens):
+                score += 250
+            elif any(tok in tit for tok in q_tokens):
+                score += 200
+            if is_alb:
+                if art == q.lower() or q.lower() in art or tit == q.lower() or q.lower() in tit:
+                    score += 350
+                else:
+                    score -= 300
+            if is_junk_album(tit, art):
+                score -= 400
+            if item.get("source") in ("deezer", "ytmusic", "apple"):
+                score += 50
+            return score
+
         seen = set()
-        max_len = max(len(dz_items), len(yt_items), len(it_items), len(sc_items))
-        for i in range(max_len):
-            for items_list, src_name in ((dz_items, "deezer"), (yt_items, "ytmusic"), (it_items, "apple"), (sc_items, "soundcloud")):
-                if i < len(items_list):
-                    it = items_list[i]
-                    dur = int(it.get("duration_seconds") or it.get("duration") or 0)
-                    k = f"{it.get('artist','').lower()} - {it.get('title','').lower()}"
-                    if k not in seen:
-                        seen.add(k)
-                        results.append({
-                            "title": it.get("title", "Unknown"), "artist": it.get("artist", "Unknown"),
-                            "album": it.get("album", ""), "duration": AudioTrack._format_duration(dur),
-                            "duration_seconds": dur, "cover": it.get("cover") or it.get("cover_medium") or "",
-                            "video_id": it.get("video_id") or it.get("url") or it.get("id", ""),
-                            "source": src_name, "is_official": src_name in ("deezer", "ytmusic", "apple")
-                        })
+        ranked = sorted(raw_candidates, key=_score, reverse=True)
+        for it in ranked:
+            if _score(it) <= 0:
+                continue
+            k = f"{it.get('artist','').lower()} - {it.get('title','').lower()}"
+            if k not in seen:
+                seen.add(k)
+                results.append(it)
     elif source in ("album", "albums"):
         albs = await asyncio.to_thread(deezer_api.search_albums, q, limit=25)
         for a in albs:

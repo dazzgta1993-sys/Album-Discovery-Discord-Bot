@@ -174,7 +174,7 @@ def is_junk_album(title: str, artist: str = "") -> bool:
 
 
 def is_junk_artist(artist_name: str) -> bool:
-    """Detect if an artist is a tribute act, karaoke singer, or cover band."""
+    """Detect if an artist is a tribute act, karaoke singer, cover band, or spam audio channel."""
     a = (artist_name or "").lower()
     for pat in (
         r"\btribute\b",
@@ -185,6 +185,13 @@ def is_junk_artist(artist_name: str) -> bool:
         r"\bbacking\s*track\b",
         r"\bhoodtrap\b",
         r"\btype\s*beat\b",
+        r"\b8d\s+audio\b",
+        r"\b16d\s+audio\b",
+        r"\bnightcore\b",
+        r"\bdaycore\b",
+        r"\bbass\s+boost\b",
+        r"\bslowed\b",
+        r"\bsped\s*up\b",
     ):
         if re.search(pat, a, re.IGNORECASE):
             return True

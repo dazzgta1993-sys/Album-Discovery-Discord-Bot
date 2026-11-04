@@ -155,7 +155,7 @@ async def api_guild_state(request: web.Request) -> web.Response:
             "available_channels": voice_channels
         },
         "player": {
-            "is_playing": bool(player.is_playing and player.current_track),
+            "is_playing": bool((player.is_playing or (player.voice_client and player.voice_client.is_playing())) and player.current_track and not is_paused),
             "is_paused": is_paused,
             "volume": int(player.volume * 100),
             "loop_mode": player.loop_mode,

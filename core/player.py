@@ -768,7 +768,7 @@ class GuildPlayer:
             log.warning(f"Failed to send Now Playing embed: {e}")
 
     async def _update_channel_status_and_message(self, track: AudioTrack):
-        """Updates Voice Channel Status and sends custom track announcement into the channel."""
+        """Updates Voice Channel Status topic without sending any chat messages."""
         vc = getattr(self.voice_client, "channel", None)
         if vc:
             try:
@@ -777,14 +777,6 @@ class GuildPlayer:
                 await self.bot.http.request(route, json={"status": status_text})
             except Exception as ex:
                 log.debug(f"Voice status notice: {ex}")
-
-        target_ch = getattr(self, "text_channel", None) or vc
-        if target_ch:
-            try:
-                album_part = f" • *{track.album}*" if track.album else ""
-                await target_ch.send(f"🎶 **Now Playing:** **{track.artist}** — *{track.title}*{album_part}")
-            except Exception as ex:
-                log.debug(f"Track announcement notice: {ex}")
 
     async def _clear_voice_channel_status(self):
         """Clears the voice channel status when playback is stopped."""

@@ -48,6 +48,11 @@ function switchTab(tabId, btn) {
   if (target) target.classList.add("active");
   if (tabId === "charts") loadCharts();
   if (tabId === "logs") loadLogs(true);
+  if (tabId === "radio" && typeof loadCloudRadio === "function") loadCloudRadio();
+  if (tabId === "timemachine" && typeof loadTimeMachine === "function") {
+    const select = document.getElementById("tmYearSelect");
+    loadTimeMachine(select ? select.value : 1999);
+  }
   if (tabId === "discography") {
     const input = document.getElementById("discoArtistInput");
     if (input && !input.value.trim()) {

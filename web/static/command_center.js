@@ -647,17 +647,48 @@ window.updateTasteStats = function(profile) {
 // ============================================================
 // Music DNA & Genre Spectrum Visualization Engine
 // ============================================================
-window.refreshMusicDna = async function() {
+window.refreshMusicDna = async function(btnEl) {
+  const btn = btnEl || document.getElementById("btnRefreshDna");
+  if (btn) {
+    btn.style.opacity = "0.6";
+    btn.style.pointerEvents = "none";
+    const icon = btn.querySelector(".refresh-icon");
+    if (icon) icon.style.animation = "spin 0.6s linear infinite";
+  }
+  const dnaCard = document.getElementById("sec-dna");
+  if (dnaCard) dnaCard.style.transition = "opacity 0.2s ease";
+
   const guildId = typeof getActiveGuildId === "function" ? getActiveGuildId() : (window.currentGuildId || "");
-  if (!guildId) return;
+  if (!guildId) {
+    if (btn) {
+      btn.style.opacity = "1";
+      btn.style.pointerEvents = "auto";
+      const icon = btn.querySelector(".refresh-icon");
+      if (icon) icon.style.animation = "";
+    }
+    return;
+  }
 
   try {
     const res = await fetch(`/api/guild/${guildId}/dna`);
-    if (!res.ok) return;
-    const dna = await res.json();
-    window.renderMusicDnaGraph(dna);
+    if (res.ok) {
+      const dna = await res.json();
+      window.renderMusicDnaGraph(dna);
+      if (btnEl && typeof showToast === "function") {
+        showToast("Music DNA Analyzed & Updated", "🧬");
+      }
+    }
   } catch (err) {
     console.error("refreshMusicDna error:", err);
+  } finally {
+    if (btn) {
+      setTimeout(() => {
+        btn.style.opacity = "1";
+        btn.style.pointerEvents = "auto";
+        const icon = btn.querySelector(".refresh-icon");
+        if (icon) icon.style.animation = "";
+      }, 350);
+    }
   }
 };
 

@@ -333,7 +333,7 @@
                 <div style="font-size:0.7rem; color:var(--text-muted);" id="dnaSummarySubtitle">Analyzing live session sound signature & platform audio characteristics...</div>
               </div>
             </div>
-            <button class="btn-micro" onclick="refreshMusicDna()" title="Refresh DNA Analysis" style="background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.3); color:#d8b4fe;">🔄 Refresh DNA</button>
+            <button class="btn-micro" id="btnRefreshDna" onclick="refreshMusicDna(this)" title="Refresh DNA Analysis" style="background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.3); color:#d8b4fe; flex-shrink:0; white-space:nowrap; cursor:pointer;"><span class="refresh-icon" style="display:inline-block;">🔄</span> Refresh DNA</button>
           </div>
 
           <!-- Multi-Color DNA Spectrum Bar -->

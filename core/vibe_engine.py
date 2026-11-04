@@ -163,7 +163,10 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
             target_art = anchor_art or seed_art
         elif player.vibe_mode == "collabs":
             target_art = seed_art
-        else:  # balanced or discovery
+        elif player.vibe_mode == "discovery":
+            # Wild Discovery: continuous rabbit-hole exploration without snapping back to starting anchor!
+            target_art = seed_art or anchor_art
+        else:  # balanced (Smart Vibe)
             if anchor_art:
                 drift_threshold = getattr(player, "vibe_drift_freq", 3)
                 if player.consecutive_autoplay_count >= drift_threshold:
@@ -394,7 +397,8 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     ]
                     if worthy_radio:
                         worthy_radio.sort(key=lambda x: x.get("rank", 0), reverse=True)
-                        chosen = random.choice(worthy_radio[:6])
+                        pool_limit = 12 if getattr(player, 'vibe_mode', '') == 'discovery' else 6
+                        chosen = random.choice(worthy_radio[:pool_limit])
                         track = AudioTrack(
                             title=chosen.get("title", "Unknown"),
                             artist=chosen.get("artist", target_art),
@@ -457,7 +461,8 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                 if not worthy_yt:
                     worthy_yt = [t for t in yt_radio if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                 if worthy_yt:
-                    chosen = random.choice(worthy_yt[:6])
+                    yt_pool = 12 if getattr(player, 'vibe_mode', '') == 'discovery' else 6
+                    chosen = random.choice(worthy_yt[:yt_pool])
                     track = AudioTrack(
                         title=chosen.get("title", "Unknown"),
                         artist=chosen.get("artist", "YouTube Music Radio"),

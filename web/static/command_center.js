@@ -400,6 +400,8 @@ window.renderQueue = function(queue, count, preloaded, deck3) {
 async function toggleAnchorLock() {
   const guildId = getActiveGuildId();
   if (!guildId) return;
+  const lockIcon = document.getElementById("anchorLockIcon");
+  if (lockIcon) lockIcon.innerText = lockIcon.innerText.includes("🔒") ? "🔓" : "🔒";
   try {
     const res = await fetch(`/api/guild/${guildId}/control`, {
       method: "POST",

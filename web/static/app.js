@@ -69,7 +69,7 @@ function formatTime(secs) { if (!secs || isNaN(secs) || secs <= 0) return "0:00"
 
 async function init() {
   await pollStatus();
-  setInterval(pollStatus, 2000);
+  setInterval(pollStatus, 1000);
   setInterval(() => {
     const tabLogs = document.getElementById("tabLogs");
     if (tabLogs && tabLogs.classList.contains("active")) {
@@ -618,7 +618,13 @@ async function sendControl(action, value = null) {
 }
 
 function toggleAutoplay() {
-  sendControl("set_autoplay", !currentAutoplay);
+  currentAutoplay = !currentAutoplay;
+  const btn = document.getElementById("btnAutoplay");
+  if (btn) {
+    btn.innerText = currentAutoplay ? "✨ Autoplay: ON" : "Autoplay: OFF";
+    btn.classList.toggle("active", currentAutoplay);
+  }
+  sendControl("set_autoplay", currentAutoplay);
 }
 function cycleQuality() {
   const q = ["auto", "128k", "192k", "320k"];
@@ -669,7 +675,19 @@ async function joinSelectedVoice() {
 async function removeQueueItem(index) { await fetch("/api/guild/" + currentGuildId + "/queue/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index }) }); showToast("Track removed from queue"); pollGuildState(currentGuildId); }
 async function clearQueue() { if (!confirm("Are you sure you want to clear the entire queue?")) return; await fetch("/api/guild/" + currentGuildId + "/queue/clear", { method: "POST" }); showToast("Queue cleared"); pollGuildState(currentGuildId); }
 async function moveQueueItem(from_index, to_index) { await fetch("/api/guild/" + currentGuildId + "/queue/move", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from_index, to_index }) }); pollGuildState(currentGuildId); }
-async function queuePlayNow(index) { await fetch("/api/guild/" + currentGuildId + "/queue/play_now", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index }) }); showToast("Playing track now \u25b6"); pollGuildState(currentGuildId); }
+async function queuePlayNow(index) {
+  const qItem = document.querySelectorAll("#queueList .queue-item")[index];
+  if (qItem) {
+    const t = qItem.querySelector(".item-title");
+    const a = qItem.querySelector(".item-artist");
+    if (t) document.getElementById("trackTitle").innerText = t.innerText;
+    if (a) document.getElementById("trackArtist").innerText = a.innerText;
+    localElapsed = 0;
+  }
+  await fetch("/api/guild/" + currentGuildId + "/queue/play_now", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index }) });
+  showToast("Playing track now ▶");
+  pollGuildState(currentGuildId);
+}
 async function executeSearch() {
   const query = document.getElementById("searchInput").value.trim();
   const source = document.getElementById("searchSource").value;

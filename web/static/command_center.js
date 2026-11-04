@@ -590,3 +590,55 @@ async function toggleAlbumTracks(btnOrId, title = '', artist = '', trayId = '', 
     tray.innerHTML = `<div style="padding:8px; color:#ef4444; font-size:0.8rem;">Failed to load tracks.</div>`;
   }
 }
+
+// Thumbs Up / Down Vibe Training Feedback System
+window.sendTasteFeedback = async function(vote) {
+  const guildId = typeof getActiveGuildId === "function" ? getActiveGuildId() : (window.currentGuildId || "");
+  if (!guildId) return;
+
+  const btnUp = document.getElementById("btnThumbUp");
+  const btnDown = document.getElementById("btnThumbDown");
+  const artistEl = document.getElementById("trackArtist");
+  const titleEl = document.getElementById("trackTitle");
+  const artist = artistEl ? artistEl.innerText.trim() : "";
+  const title = titleEl ? titleEl.innerText.trim() : "";
+
+  // 0ms Optimistic UI Feedback
+  if (vote === "up") {
+    if (btnUp) btnUp.classList.add("active-up");
+    if (btnDown) btnDown.classList.remove("active-down");
+    if (typeof showToast === "function") showToast(`👍 AI Vibe Trained: Boosted "${artist}"`, "✨");
+  } else {
+    if (btnDown) btnDown.classList.add("active-down");
+    if (btnUp) btnUp.classList.remove("active-up");
+    if (typeof showToast === "function") showToast(`👎 Disliked: Banish "${artist}" & skipping`, "⛔");
+    if (typeof skipTrack === "function") skipTrack();
+  }
+
+  try {
+    const res = await fetch(`/api/guild/${guildId}/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ artist, title, vote })
+    });
+    const data = await res.json();
+    if (data && data.taste_profile) {
+      window.updateTasteStats(data.taste_profile);
+    }
+  } catch (e) {
+    console.error("sendTasteFeedback error:", e);
+  }
+};
+
+window.updateTasteStats = function(profile) {
+  if (!profile) return;
+  const pill = document.getElementById("tasteStatPill");
+  const txt = document.getElementById("tasteStatText");
+  if (!pill || !txt) return;
+  const likes = profile.likes_count || 0;
+  const dislikes = profile.dislikes_count || 0;
+  if (likes > 0 || dislikes > 0) {
+    pill.style.display = "inline-flex";
+    txt.innerText = `${likes} 👍 | ${dislikes} 👎`;
+  }
+};

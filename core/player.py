@@ -850,6 +850,22 @@ class GuildPlayer:
             self._idle_task.cancel()
             self._idle_task = None
 
+    def handle_feedback(self, artist: str, title: str, vote: str) -> dict:
+        from core.vibe_engine import record_taste_feedback
+        profile = record_taste_feedback(self.guild.id, artist, title, vote)
+        if vote == "down":
+            art_lower = str(artist or "").strip().lower()
+            if self.current_track and str(self.current_track.artist).strip().lower() == art_lower:
+                self.skip()
+            if self._prewarmed_autoplay_track and str(self._prewarmed_autoplay_track.artist).strip().lower() == art_lower:
+                self._prewarmed_autoplay_track = None
+                self._prewarm_task = None
+                self._schedule_prewarm_next(delay=0.1)
+            if self._deck3_autoplay_track and str(self._deck3_autoplay_track.artist).strip().lower() == art_lower:
+                self._deck3_autoplay_track = None
+                self._schedule_deck3_cue(delay=0.5)
+        return profile
+
     async def disconnect(self):
         self.stop()
         self._cancel_idle_timer()

@@ -15,13 +15,66 @@ if TYPE_CHECKING:
 
 log = get_bot_logger("vibe_engine")
 
+_guild_taste_store = {}
 
-def is_vibe_worthy(track_dict: dict, artist_fans: int = 0, clean_only: bool = False) -> bool:
-    """Shield against vibe killers: filters junk, skits, amateur spam, viral remixes, and explicit tracks."""
+def get_guild_taste_profile(guild_id: int) -> dict:
+    if guild_id not in _guild_taste_store:
+        _guild_taste_store[guild_id] = {
+            "likes": set(),
+            "dislikes": set(),
+            "track_dislikes": set(),
+            "artist_scores": {}
+        }
+    store = _guild_taste_store[guild_id]
+    return {
+        "likes_count": len(store["likes"]),
+        "dislikes_count": len(store["dislikes"]),
+        "liked_artists": list(store["likes"]),
+        "disliked_artists": list(store["dislikes"]),
+        "disliked_tracks": list(store["track_dislikes"]),
+        "artist_scores": dict(store["artist_scores"])
+    }
+
+def record_taste_feedback(guild_id: int, artist: str, title: str, vote: str) -> dict:
+    art = str(artist or "").strip().lower()
+    tit = str(title or "").strip().lower()
+    if guild_id not in _guild_taste_store:
+        get_guild_taste_profile(guild_id)
+    store = _guild_taste_store[guild_id]
+    
+    if vote == "up":
+        if art:
+            store["likes"].add(art)
+            store["dislikes"].discard(art)
+            store["artist_scores"][art] = store["artist_scores"].get(art, 0) + 2
+        log.info(f"[{guild_id}] Thumbs UP: '{artist}' boosted (+2 taste score)")
+    elif vote == "down":
+        if art:
+            store["dislikes"].add(art)
+            store["likes"].discard(art)
+            store["artist_scores"][art] = store["artist_scores"].get(art, 0) - 10
+        if tit:
+            store["track_dislikes"].add(f"{art} - {tit}")
+            store["track_dislikes"].add(tit)
+        log.info(f"[{guild_id}] Thumbs DOWN: '{artist} - {title}' banished from session")
+    
+    return get_guild_taste_profile(guild_id)
+
+
+def is_vibe_worthy(track_dict: dict, artist_fans: int = 0, clean_only: bool = False, disliked_artists: set = None, disliked_tracks: set = None) -> bool:
+    """Shield against vibe killers: filters junk, skits, amateur spam, viral remixes, explicit tracks, and downvoted tracks."""
     title = track_dict.get("title", "")
     art = track_dict.get("artist") or track_dict.get("name", "")
     dur = track_dict.get("duration") or track_dict.get("duration_seconds", 0)
     rank = track_dict.get("rank", 0)
+
+    # Thumbs Down / Disliked Filter
+    if disliked_artists and str(art).strip().lower() in disliked_artists:
+        return False
+    if disliked_tracks:
+        art_tit = f"{str(art).strip().lower()} - {str(title).strip().lower()}"
+        if art_tit in disliked_tracks or str(title).strip().lower() in disliked_tracks:
+            return False
 
     # 0. Explicit Content Shield (Radio Edit Clean)
     if clean_only:
@@ -81,6 +134,11 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
     effective_track = seed_track or player.current_track
     if not effective_track:
         return None
+
+    taste = get_guild_taste_profile(player.guild.id)
+    disliked_artists = taste["disliked_artists"]
+    disliked_tracks = taste["disliked_tracks"]
+    liked_artists = taste["liked_artists"]
 
     try:
         current_art = effective_track.artist
@@ -155,7 +213,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                 worthy_self = [
                     t for t in artist_tracks
                     if t.get("title", "").lower() not in recent_titles
-                    and is_vibe_worthy(t, clean_only=clean_mode)
+                    and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
                 ]
                 if worthy_self:
                     chosen = random.choice(worthy_self[:5] if player.hit_depth == "top_hits" else worthy_self)
@@ -187,7 +245,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     worthy_top = [
                         t for t in top_tracks
                         if t.get("title", "").lower() not in recent_titles
-                        and is_vibe_worthy(t, clean_only=clean_mode)
+                        and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
                     ]
                     if worthy_top:
                         chosen_t = random.choice(worthy_top[:3])
@@ -214,7 +272,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                 sc_tracks = await asyncio.to_thread(stream_service.search_soundcloud_tracks, f"{target_art} remix", limit=15)
                 if not sc_tracks:
                     sc_tracks = await asyncio.to_thread(stream_service.search_soundcloud_tracks, target_art, limit=15)
-                worthy_sc = [t for t in sc_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode)]
+                worthy_sc = [t for t in sc_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                 if worthy_sc:
                     chosen = random.choice(worthy_sc[:5])
                     track = AudioTrack(
@@ -241,7 +299,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                 yt_vids = await asyncio.to_thread(stream_service.search_youtube_tracks, f"{target_art} official live", limit=12)
                 if not yt_vids:
                     yt_vids = await asyncio.to_thread(stream_service.search_youtube_tracks, target_art, limit=12)
-                worthy_ytv = [t for t in yt_vids if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode)]
+                worthy_ytv = [t for t in yt_vids if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                 if worthy_ytv:
                     chosen = random.choice(worthy_ytv[:4])
                     raw_dur = chosen.get("duration", 0)
@@ -276,7 +334,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     alb_title = sel_alb.get("title", "")
                     if alb_title:
                         mb_search = await asyncio.to_thread(itunes_api.search_tracks, query=f"{target_art} {alb_title}", limit=8)
-                        worthy_mb = [t for t in mb_search if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode)]
+                        worthy_mb = [t for t in mb_search if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                         if worthy_mb:
                             chosen = random.choice(worthy_mb[:4])
                             track = AudioTrack(
@@ -332,7 +390,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                         t for t in radio_tracks
                         if t.get("title", "").lower() not in recent_titles
                         and (t.get("artist") or "").lower() not in recent_artists
-                        and is_vibe_worthy(t, clean_only=clean_mode)
+                        and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
                     ]
                     if worthy_radio:
                         worthy_radio.sort(key=lambda x: x.get("rank", 0), reverse=True)
@@ -394,10 +452,10 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     if t.get("title", "").lower() not in recent_titles
                     and f"{t.get('artist', '').lower().strip()} - {t.get('title', '').lower().strip()}" not in failed_keys
                     and (t.get("artist", "").lower().strip() not in recent_artists if cooldown_n > 0 else True)
-                    and is_vibe_worthy(t, clean_only=clean_mode)
+                    and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
                 ]
                 if not worthy_yt:
-                    worthy_yt = [t for t in yt_radio if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode)]
+                    worthy_yt = [t for t in yt_radio if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                 if worthy_yt:
                     chosen = random.choice(worthy_yt[:6])
                     track = AudioTrack(
@@ -422,7 +480,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
         if engine_src in ("auto", "spotify", "apple"):
             try:
                 itunes_tracks = await asyncio.to_thread(itunes_api.search_tracks, query=target_art, limit=15)
-                worthy_apple = [t for t in itunes_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode)]
+                worthy_apple = [t for t in itunes_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                 if worthy_apple:
                     chosen = random.choice(worthy_apple[:4])
                     brand_src = "Spotify" if engine_src == "spotify" else "Apple Music"
@@ -481,7 +539,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                 t for t in tracks
                 if t.get("title", "").lower() not in recent_titles
                 and f"{t.get('artist', '').lower().strip()} - {t.get('title', '').lower().strip()}" not in failed_keys
-                and is_vibe_worthy(t, clean_only=clean_mode)
+                and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
             ]
             if candidates:
                 chosen = random.choice(candidates[:5])

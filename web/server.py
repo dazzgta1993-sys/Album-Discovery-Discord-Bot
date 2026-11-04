@@ -11,6 +11,7 @@ import discord
 
 from app.services import deezer_api, stream_service, discovery, itunes_api, musicbrainz_api, official_charts
 from core.player import AudioTrack, GuildPlayer
+from core.vibe_engine import get_guild_taste_profile
 from core.logger import get_bot_logger
 
 log = get_bot_logger("web")
@@ -189,10 +190,27 @@ async def api_guild_state(request: web.Request) -> web.Response:
                 "consecutive_autoplay_count": player.consecutive_autoplay_count,
                 "last_brain_decision": getattr(player, "last_brain_decision", "Brain Online"),
                 "deck2_status": "Ready (Preloaded)" if (d2 and d2.stream_url) else ("Buffering" if d2 else "Standby"),
-                "deck3_status": "Ready (Cued)" if (d3 and d3.stream_url) else ("Cued" if d3 else "Standby")
+                "deck3_status": "Ready (Cued)" if (d3 and d3.stream_url) else ("Cued" if d3 else "Standby"),
+                "taste_profile": get_guild_taste_profile(guild.id)
             }
         }
     })
+
+async def api_feedback(request: web.Request) -> web.Response:
+    bot: discord.Client = request.app["bot"]
+    guild_id = request.match_info.get("guild_id", "")
+    guild, player = _get_player_and_guild(bot, guild_id)
+    if not guild or not player:
+        return web.json_response({"error": "Guild or player not found"}, status=404)
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    artist = data.get("artist") or (player.current_track.artist if player.current_track else "")
+    title = data.get("title") or (player.current_track.title if player.current_track else "")
+    vote = str(data.get("vote", "up")).lower()
+    profile = player.handle_feedback(artist, title, vote)
+    return web.json_response({"status": "ok", "vote": vote, "artist": artist, "title": title, "taste_profile": profile})
 
 async def api_control(request: web.Request) -> web.Response:
     bot: discord.Client = request.app["bot"]
@@ -914,6 +932,7 @@ def create_web_app(bot: discord.Client) -> web.Application:
     app.router.add_get("/api/guilds", api_status)
     app.router.add_get("/api/guild/{guild_id}", api_guild_state)
     app.router.add_post("/api/guild/{guild_id}/control", api_control)
+    app.router.add_post("/api/guild/{guild_id}/feedback", api_feedback)
     app.router.add_post("/api/guild/{guild_id}/queue/{op}", api_queue_action)
     app.router.add_get("/api/search", api_search)
     app.router.add_post("/api/guild/{guild_id}/play", api_play)

@@ -115,6 +115,19 @@
         <button class="btn-icon" id="btnLoop" title="Cycle Loop Mode" onclick="sendControl('set_loop')">🔁</button>
       </div>
 
+      <!-- Vibe Training Feedback (Thumbs Up / Down) -->
+      <div class="vibe-feedback-row" style="display:flex; align-items:center; justify-content:center; gap:8px; margin: 8px 0;">
+        <button class="vibe-thumb-btn" id="btnThumbUp" onclick="sendTasteFeedback('up')" title="Thumbs Up: Train AI to play more like this artist">
+          👍 <span style="font-size:0.75rem; font-weight:700;">Love Vibe</span>
+        </button>
+        <button class="vibe-thumb-btn" id="btnThumbDown" onclick="sendTasteFeedback('down')" title="Thumbs Down: Skip and banish this artist from session">
+          👎 <span style="font-size:0.75rem; font-weight:700;">Dislike &amp; Skip</span>
+        </button>
+        <span class="taste-stat-pill" id="tasteStatPill" style="display:none; font-size:0.7rem; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
+          ⭐ <span id="tasteStatText">0 trained</span>
+        </span>
+      </div>
+
       <!-- Quick Toggles -->
       <div class="toggles-bar">
         <button class="toggle-btn" id="btnAutoplay" onclick="toggleAutoplay()">✨ Autoplay: ON</button>

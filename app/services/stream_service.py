@@ -853,12 +853,17 @@ def get_stream_info(video_id: str, quality: str = "auto", force_fresh: bool = Fa
         chosen_format = format_map.get(q_key, format_map["auto"])
 
         ydl_opts = {
-            "format": chosen_format,
+            "format": f"{chosen_format}/bestaudio/best",
             "quiet": True,
             "no_warnings": True,
             "noplaylist": True,
             "compat_opts": ["no-plugins"],
             "check_formats": False,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["ios", "android", "mweb"]
+                }
+            }
         }
 
         cookie_file_candidates = [

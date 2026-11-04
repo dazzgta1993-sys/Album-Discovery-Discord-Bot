@@ -415,6 +415,11 @@ class GuildPlayer:
             self.is_playing = False
             return
         async with self._lock:
+            now = time.time()
+            if not getattr(self, "_was_manually_skipped", False) and getattr(self, "_last_play_start_time", 0.0) > 0:
+                if now - self._last_play_start_time < 0.8:
+                    log.debug(f"[{self.guild.name}] play_next throttled to prevent rapid-skip cascade.")
+                    return
             if getattr(self, "_is_stopped", False):
                 self.is_playing = False
                 return
@@ -604,11 +609,14 @@ class GuildPlayer:
 
                 if self.voice_client.is_playing() or self.voice_client.is_paused():
                     try:
+                        self._suppress_after = True
                         self.voice_client.stop()
                     except Exception:
                         pass
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.08)
 
+                self._suppress_after = False
+                self._last_play_start_time = time.time()
                 self.voice_client.play(transformed_source, after=_after_play)
                 self.is_playing = True
                 self._start_progress_task()

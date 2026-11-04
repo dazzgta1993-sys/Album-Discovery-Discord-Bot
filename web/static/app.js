@@ -191,7 +191,9 @@ async function pollGuildState(guildId) {
     const p = data.player;
     window._lastDeck2Track = p.preloaded_track;
     if (window._isSkipping) {
-      if (p.current_track && p.current_track.title === window._skippedTrackTitle) return;
+      if (Date.now() - (window._skipStartTime || 0) < 1200) {
+        if (p.current_track && p.current_track.title === window._skippedTrackTitle) return;
+      }
       window._isSkipping = false;
     }
     isPlaying = p.is_playing;
@@ -578,6 +580,7 @@ function skipTrack() {
   const monAudio = document.getElementById("browserMonitorAudio");
   if (monAudio) { monAudio.pause(); monAudio.removeAttribute("src"); }
   window._isSkipping = true;
+  window._skipStartTime = Date.now();
   window._skippedTrackTitle = document.getElementById("trackTitle") ? document.getElementById("trackTitle").innerText : "";
   if (window._lastDeck2Track && window._lastDeck2Track.title) {
     document.getElementById("trackTitle").innerText = window._lastDeck2Track.title;

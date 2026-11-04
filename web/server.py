@@ -236,7 +236,8 @@ async def api_control(request: web.Request) -> web.Response:
             player.resume()
         elif player.voice_client and player.voice_client.is_playing():
             player.pause()
-        elif len(player.queue) > 0 and not player.is_playing:
+        elif not player.is_playing and (len(player.queue) > 0 or player.autoplay):
+            player._is_stopped = False
             asyncio.create_task(player.play_next())
     elif action == "skip":
         next_t = getattr(player, "deck2_track", None) or (player.queue[0] if player.queue else None)
@@ -865,31 +866,6 @@ async def api_stream(request: web.Request) -> web.StreamResponse:
 
     return response
 
-async def api_discography(request: web.Request) -> web.Response:
-    artist = request.query.get("artist", "").strip()
-    if not artist:
-        return web.json_response({"albums": [], "categories": [], "counts": {}})
-    artists = await asyncio.to_thread(deezer_api.search_artists, query=artist, limit=1)
-    if not artists:
-        return web.json_response({"albums": [], "categories": [], "counts": {}})
-    art = artists[0]
-    art_id = str(art.get("id"))
-    art_name = art.get("name") or artist
-
-    data = await asyncio.to_thread(discovery.get_artist_albums, art_id, art_name, limit=300)
-    albums = data.get("albums", [])
-    counts = data.get("counts", {})
-    search_log.info(f"[Web Hub Discography] Query: '{artist}' -> Matched '{art_name}' ({len(albums)} releases | {counts.get('Studio Albums', 0)} Studio Albums)")
-    return web.json_response({
-        "artist": art_name,
-        "artist_id": art_id,
-        "picture": art.get("picture_big") or art.get("picture_medium") or "",
-        "fans": art.get("fans", 0),
-        "categories": data.get("categories", []),
-        "counts": data.get("counts", {}),
-        "albums": data.get("albums", [])
-    })
-
 async def api_logs(request: web.Request) -> web.Response:
     log_type = request.query.get("type", "all").lower().strip()
     logs_dir = os.path.join(os.path.dirname(WEB_DIR), "logs")
@@ -963,8 +939,8 @@ def create_web_app(bot: discord.Client) -> web.Application:
     app.router.add_get("/api/search", api_search)
     app.router.add_post("/api/guild/{guild_id}/play", api_play)
     app.router.add_get("/api/charts", api_charts)
+    from web.album_api import api_dna, api_discography, api_timemachine, api_radio
     app.router.add_get("/api/discography", api_discography)
-    from web.album_api import api_dna
     app.router.add_get("/api/album/tracks", api_album_tracks)
     app.router.add_get("/api/guild/{guild_id}/dna", api_dna)
     app.router.add_get("/api/logs", api_logs)

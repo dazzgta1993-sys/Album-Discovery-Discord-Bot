@@ -131,7 +131,20 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
     """Multi-platform recommendation engine across YouTube Music, Deezer, and Apple Music."""
     from core.player import AudioTrack
 
-    effective_track = seed_track or player.current_track
+    effective_track = seed_track or player.current_track or (player.history[-1] if getattr(player, 'history', None) else None)
+    if not effective_track:
+        try:
+            charts_data = await asyncio.to_thread(official_charts.get_official_singles_chart, 10)
+            if charts_data:
+                top_c = charts_data[0]
+                effective_track = AudioTrack(
+                    title=top_c.get("title", "Popular Track"),
+                    artist=top_c.get("artist", "Top Artists"),
+                    album="Charts",
+                    duration_seconds=0
+                )
+        except Exception:
+            pass
     if not effective_track:
         return None
 

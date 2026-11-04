@@ -133,3 +133,50 @@ async def static_cache_control_middleware(request: web.Request, handler):
     return response
 
 
+
+async def api_discography(request: web.Request) -> web.Response:
+    from app.services import deezer_api
+    artist = request.query.get("artist", "").strip()
+    if not artist:
+        return web.json_response({"albums": [], "categories": [], "counts": {}})
+    artists = await asyncio.to_thread(deezer_api.search_artists, query=artist, limit=1)
+    if not artists:
+        return web.json_response({"albums": [], "categories": [], "counts": {}})
+    art = artists[0]
+    art_id = str(art.get("id"))
+    art_name = art.get("name") or artist
+
+    albums_raw = await asyncio.to_thread(deezer_api.get_artist_albums, art_id, 80)
+    seen_titles = set()
+    cleaned = []
+    for a in albums_raw:
+        title = a.get("title", "").strip()
+        t_lower = title.lower()
+        if t_lower in seen_titles:
+            continue
+        seen_titles.add(t_lower)
+        cleaned.append(a)
+    return web.json_response({"artist": art_name, "albums": cleaned})
+
+async def api_timemachine(request: web.Request) -> web.Response:
+    try:
+        from app.services import timemachine_service
+        year_str = request.query.get("year", "1999").strip()
+        year = int(year_str) if year_str.isdigit() else 1999
+        data = await asyncio.to_thread(timemachine_service.get_timemachine_albums, year)
+        years = await asyncio.to_thread(timemachine_service.get_timemachine_years)
+        return web.json_response({"year": year, "years": years, "albums": data.get("albums", [])})
+    except Exception as e:
+        return web.json_response({"year": 1999, "years": [], "albums": [], "error": str(e)})
+
+async def api_radio(request: web.Request) -> web.Response:
+    try:
+        from app.services import official_charts
+        radio_id = request.query.get("station", "").strip()
+        if radio_id:
+            tracks = await asyncio.to_thread(official_charts.get_live_radio_tracks, radio_id)
+            return web.json_response({"station": radio_id, "tracks": tracks})
+        stations = await asyncio.to_thread(official_charts.get_live_dj_stations, limit=100)
+        return web.json_response({"stations": stations})
+    except Exception as e:
+        return web.json_response({"stations": [], "error": str(e)})

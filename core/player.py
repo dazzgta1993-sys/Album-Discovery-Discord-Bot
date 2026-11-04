@@ -454,7 +454,7 @@ class GuildPlayer:
                     self.queue.append(self.current_track)
                 next_track = self.queue.popleft()
             else:
-                if self.autoplay and self.current_track:
+                if self.autoplay:
                     if self._prewarmed_autoplay_track:
                         next_track = self._prewarmed_autoplay_track
                         self._prewarmed_autoplay_track = self._deck3_autoplay_track
@@ -463,7 +463,8 @@ class GuildPlayer:
                         next_track = self._deck3_autoplay_track
                         self._deck3_autoplay_track = None
                     else:
-                        next_track = await self._fetch_autoplay_vibe_track()
+                        seed = self.current_track or (self.history[-1] if self.history else None)
+                        next_track = await self._fetch_autoplay_vibe_track(seed_track=seed)
                     if not next_track:
                         self.current_track = None
                         self.is_playing = False

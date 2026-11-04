@@ -590,6 +590,13 @@ class GuildPlayer:
                                 log.error(f"Error in play_next task: {err}")
                         fut.add_done_callback(_done)
 
+                if self.voice_client.is_playing() or self.voice_client.is_paused():
+                    try:
+                        self.voice_client.stop()
+                    except Exception:
+                        pass
+                    await asyncio.sleep(0.1)
+
                 self.voice_client.play(transformed_source, after=_after_play)
                 self.is_playing = True
                 self._start_progress_task()
@@ -605,6 +612,7 @@ class GuildPlayer:
             except Exception as e:
                 log.error(f"Error starting playback in {self.guild.name}: {e}")
                 self.is_playing = False
+                await asyncio.sleep(1.0)
                 asyncio.create_task(self.play_next())
 
     def _enrich_track_metadata(self, track: AudioTrack):

@@ -568,7 +568,7 @@ class GuildPlayer:
                     options=ffmpeg_opts
                 )
                 transformed_source = AccurateAudioSource(audio_source, volume=self.volume)
-self._active_source = transformed_source
+                self._active_source = transformed_source
                 self._cancel_progress_task()
                 self.play_start_time = time.time()
                 self.total_paused_time = 0.0

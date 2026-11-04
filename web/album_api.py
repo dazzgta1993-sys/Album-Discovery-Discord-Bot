@@ -146,7 +146,7 @@ async def api_discography(request: web.Request) -> web.Response:
     art_id = str(art.get("id"))
     art_name = art.get("name") or artist
 
-    albums_raw = await asyncio.to_thread(deezer_api.get_artist_albums, art_id, 80)
+    albums_raw = await asyncio.to_thread(deezer_api.get_artist_discography, art_id, 80)
     seen_titles = set()
     cleaned = []
     for a in albums_raw:

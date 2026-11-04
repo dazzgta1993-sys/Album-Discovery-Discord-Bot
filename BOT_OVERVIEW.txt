@@ -1,0 +1,274 @@
+================================================================================
+          ALBUM DISCOVERY — DISCORD MUSIC BOT ARCHITECTURE & OVERVIEW
+                              (Updated: November 2026)
+================================================================================
+
+PROJECT SUMMARY:
+A high-fidelity, studio-grade Discord Music Bot & Real-Time Command Center Hub 
+built upon the "Album Discovery" music intelligence engine. 
+
+Unlike traditional bots that blindly scrape arbitrary YouTube search queries,
+this system unites 9 multi-platform music engines, real-time editorial metadata,
+lossless studio taxonomy, an autonomous AI Autoplay Vibe DJ, an advanced Triple-Deck 
+audio pipeline with two-step zero-buffer preloading, and a live web Command Center at http://localhost:8905.
+
+================================================================================
+WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
+================================================================================
+
+1. 🎛️ Continuous Triple-Deck Audio Pipeline (Deck 1 Live | Deck 2 Ready | Deck 3 Cued):
+   - Traditional bots suffer from 2-5 second silent buffering gaps between songs.
+   - If someone skips twice quickly, traditional bots stall and crash.
+   - This bot runs a continuous 3-deck pipeline: Deck 1 streams live, Deck 2 is fully 
+     preloaded with decoded Opus audio for 0ms transitions, and Deck 3 is pre-cued 
+     in the chute two steps ahead with full double-skip protection.
+
+2. 🧠 Harmonic Multi-Deck AI Autoplay DJ & Vibe Anchor:
+   - Traditional autoplay simply scrapes YouTube's algorithm and quickly drifts into 
+     viral TikTok memes, amateur bedroom recordings, or unrelated genres.
+   - This bot features a multi-tiered recommendation engine prioritizing Deezer 
+     Curated Artist Radio and YouTube Music studio masters.
+   - Harmonic Chain: Deck 3 is seeded directly from Deck 2, creating a smooth, 
+     professionally curated musical story arc.
+   - Vibe Anchor Protection & 1-Click Lock: Retains the user's seed artist and genre 
+     across skips, with an interactive ⚓ Lock pill to lock the DJ into a specific sound.
+   - Anti-Junk Shield: Actively filters out hoodtrap, type beats, TikTok remixes, 
+     karaoke, skits (<65s), and low-listen amateur spam.
+
+3. 🎧 100% Frame-Synchronized Audio Source (AccurateAudioSource):
+   - Traditional bots use wall-clock timers (time.time()) that drift and desynchronize 
+     during pauses or network lag.
+   - This bot tracks decoded 48kHz 16-bit stereo PCM bytes directly (bytes_read / 192,000), 
+     ensuring seeker bars and dashboard telemetry match listener headphones with zero drift.
+
+4. 🎙️ Live AI Radio DJ Host & Voice Segues (edge-tts Neural Voices):
+   - Traditional bots have no personality—just cold audio tracks dropping silently.
+   - This bot features an authentic broadcast radio DJ that jumps on the mic when a 
+     song ends, delivering crisp, punchy 3-5 second segues right before the next beat drops:
+     * Zero Music Interference: Only speaks between songs—never talks over active music.
+     * Studio Neural Personalities: Powered by Microsoft Edge studio voices (Classic FM 
+       Christopher, Hype Club Guy, Late Night Chill Eric, and BBC Radio 1 Ryan).
+     * Pre-generated Background Pipeline: Drops are pre-rendered into cache while Deck 2 
+       is preloading so songs transition with zero latency.
+     * Configurable Cadence: Choose between Every 3 Songs (Radio standard), Every 5 Songs, 
+       Every Song, or On-Demand with the "Drop DJ Voice Now" trigger.
+
+5. 🌐 Unified 9-Platform Intelligence Ecosystem:
+   - Seamlessly blends Deezer Studio Masters, YouTube Music, YouTube Live/Concerts, 
+     Spotify catalogs, Apple Music / iTunes high-res covers, SoundCloud DJ mixes, 
+     MusicBrainz archival discographies, and real-time Official UK/US Billboard charts.
+
+6. 🖥️ Studio Command Center Web Hub (http://localhost:8905):
+   - Full desktop-grade web application featuring:
+     * Fast-Play universal input bar
+     * 94 Curated High-Definition Cloud Radio Stations
+     * 67-Year Landmark Time Machine (1960 — 2026)
+     * Real-time pulsing soundwave visualizer
+     * Listen Live in Browser (low-latency Web Opus audio monitor)
+     * Fluid mouse-wheel volume adjustment & universal Enter key shortcuts
+
+================================================================================
+1. UNIFIED 9-ENGINE MUSIC ECOSYSTEM
+================================================================================
+
+Both the Web Command Center and Discord slash commands (/play, /playnow, /dj, /search)
+support 9 distinct intelligence & streaming engines:
+
+1. 🌐 Multi-Engine Auto (Smart Hybrid Cascade)
+   - Blends signals across all engines dynamically.
+   - Cascades from artist radio -> collaborators -> studio catalog -> charts.
+
+2. 🔴 YouTube Music Radio (ytmusic)
+   - Official studio-quality audio streams (Topic channels).
+   - Powered by Google/YouTube Music's song-to-song recommendation algorithm.
+
+3. ▶️ YouTube Video & Live (youtube)
+   - Searches music videos, live concert recordings, and acoustic sessions.
+   - Ideal for live versions not found on studio albums.
+
+4. 🟣 Deezer Studio Masters (deezer)
+   - 320kbps high-fidelity studio catalog.
+   - Deep artist relationship graphs, official artist radio, and verified collaborator trees.
+
+5. 🟢 Spotify Catalog Match (spotify)
+   - Resolves direct Spotify track, album, and playlist URLs.
+   - Searches mainstream curated hit repertoire and top catalog hits.
+
+6. 🍎 Apple Music / iTunes (apple)
+   - Official Apple Music / iTunes metadata, lossless studio tracks, and ratings.
+   - High-resolution 1400x1400 cover art resolution.
+
+7. 🟠 SoundCloud (soundcloud)
+   - DJ sets, club remixes, underground tracks, unreleased demos, and bootlegs.
+   - Direct SoundCloud URL resolution for tracks, sets, and playlists.
+
+8. 🏛️ MusicBrainz Archive (musicbrainz)
+   - MetaBrainz Foundation open music encyclopedia.
+   - Canonical studio LP release-group taxonomy, disambiguation, and archival discographies.
+
+9. 📊 Official Charts Company (charts)
+   - Live verified real-world radio broadcast and sales charts (UK Top 40, US Billboard Hot 100).
+   - Functions as an anchor engine to keep sessions energetic and recognizable.
+
+================================================================================
+2. REAL-TIME WEB COMMAND CENTER (http://localhost:8905)
+================================================================================
+
+Built with a lightweight async aiohttp backend and a responsive studio dark-mode UI:
+
+1. Command Center Top Strip & Fast-Play Bar:
+   - System Active Pulse: Real-time green pulse beacon showing live background bot connectivity.
+   - Triple-Deck Pipeline Badge: Live indicator showing standby/cued status.
+   - Audio Codec Badge: Displays active streaming codec (Opus 48kHz HQ).
+   - Interactive Loop Badge: One-click cycle between Loop Off, Loop Track, and Loop Queue.
+   - ⚡ Fast-Play Bar: Instantly play or queue any song title, artist name, album name, or 
+     direct YouTube / Spotify / Apple Music link right from the top of the screen.
+
+2. Live Player Deck & Soundwave Visualizer:
+   - Server selector with instant multi-guild state polling.
+   - Quick Voice Channel Dropdown: One-click joining or switching into any voice channel.
+   - Frequency Soundwave Visualizer: Animated purple equalizer bars that pulse synchronously 
+     whenever music is actively playing in Discord.
+   - Transport Buttons: Play/Pause, Skip, Previous Replay, Shuffle, Stop.
+   - Zero-Jitter Volume Slider: Real-time slider with mouse-wheel scrolling support, 
+     instant scaling, and speaker icon one-click mute/unmute restoration.
+   - ⚓ Vibe Anchor Badge & 1-Click Lock: Interactive pill showing current anchor artist with 
+     instant toggle between Free Flow (🔓) and Locked (🔒) modes.
+   - 🎧 Listen Live in Browser: Low-latency live browser audio monitor streaming 
+     the bot's Opus voice feed directly to desktop speakers or headphones.
+
+3. Interactive Queue Tab & Triple-Deck Pipeline Banner:
+   - Live queue badge counter with track duration and total upcoming runtime.
+   - Full reordering controls (▲ Move Up / ▼ Move Down).
+   - Instant play button (▶) and single-track removal (✕).
+   - 🎛️ Triple-Deck Preload Banner: Live visual indicator tracking both:
+     * 🟢 Deck 2 Ready (Next Up): Audio stream preloaded for 0ms transition.
+     * 🔵 Deck 3 Cued (In The Chute): Pre-resolved 2 songs ahead in the pipeline.
+   - Smart Queue Flush & Autoplay Re-roll: Clear Queue flushes preloaded AI tracks, 
+     and Shuffle re-rolls fresh recommendations from the anchor.
+
+4. 🕒 Playback History Tab:
+   - Persistent reverse-chronological list of recently played tracks.
+   - Displays track title, artist, album, runtime, artwork, and relative timestamp.
+   - One-click "▶ Replay Now" and "+ Queue" buttons.
+
+5. 🧠 Vibe Engine & AI Autoplay Control Hub:
+   - Live Telemetry Card: Shows current Vibe Anchor artist, lock state, autoplay chain count, 
+     Deck 2 Standby state, Deck 3 Pipeline state, and the latest AI routing decision.
+   - Vibe Discovery Matrix: Switch between Artist Deep Dive (100% same artist), 
+     Collabs & Circle (collaborators/producers), Smart Vibe (default), and Wide Discovery.
+   - Drift & Depth Dials: Adjust drift frequency (1 to 10 songs) and catalog depth 
+     (Top Hits vs Deep Cuts).
+   - Decade & Era Lock: Filter recommendations to All Eras, 2020s, 2010s, 2000s, or 80s/90s Classics.
+   - Energy Flow Dial: Natural Matched Flow, High Energy Upbeat/Party, or Chill & Mellow Late Night.
+   - 🛡️ Explicit Content Shield: Toggle between "Explicit Allowed" (original album cuts) 
+     and "Radio Edit Clean" (family-friendly FM radio edits).
+   - 🎛️ Recommendation Engine Platform: One-click pills to lock the AI DJ to any of the 9 engines.
+
+6. ⏳ Time Machine Tab (1960 — 2026):
+   - Interactive year selector and quick decade pills (60s, 70s, 80s, 90s, 00s, 10s, 20s).
+   - Explores landmark releases and timeless album masterpieces across 67 musical years.
+   - Genre filter pills for rapid sub-genre navigation.
+   - 1-Click "▶ Play" and "+ Add" buttons to instantly stream historic albums into voice chat.
+
+7. 📻 Cloud DJ Radio Tab (94 Curated Stations):
+   - Live searchable station catalog spanning Lofi, Synthwave, Cyberpunk, 80s Retrowave, 
+     Classic Rock, Ambient, Jazz, Hip-Hop, and Chillout.
+   - Category filter pills with smooth horizontal scrolling.
+   - Instant 1-Click "▶ Tune In" action queues up live stream mixes and continuous station feeds.
+
+8. 🔍 Search & Add Tab:
+   - Universal search across tracks, artists, albums, or direct URLs with Enter-key trigger.
+   - Unified engine selector matching all 9 platforms.
+
+9. 🔥 Trending Charts Tab:
+   - Live UK Official Top 40 & Billboard charts with one-click play/add actions.
+
+10. 💿 Discography & Albums Tab:
+    - Deluxe vinyl showcase cards with glowing accents and disc depth shadow.
+    - Expandable "📋 View Tracklist" trays and "▶ Play Full LP" (queues album at head of queue).
+
+11. 📜 Diagnostics & Live Logs Tab:
+    - Color-coded real-time log inspector filtered by All, Searches, Audio, Bot, or Errors.
+
+===============================================================================
+3. CORE ARCHITECTURE & AUDIO ENGINE
+===============================================================================
+
+1. Triple-Deck Audio Pipeline (player.py):
+   - FFmpeg with high-bitrate Opus stereo encoding (48kHz).
+   - 3-Deck Continuous Preloading:
+     * Deck 1 (Live): Actively streaming to the Discord voice channel.
+     * Deck 2 (Next Up): Buffers and holds the stream for the immediate next song.
+     * Deck 3 (In The Chute): Resolves metadata and stream tokens 2 tracks ahead.
+   - Double-Skip & Network Latency Protection: Even if members skip twice in rapid succession,
+     playback begins instantly without buffering or waiting on API round-trips.
+   - Dynamic Volume Transformer: Scales volume smoothly without resetting stream sockets.
+   - Configurable Audio Quality: Auto (Dynamic Adaptive), 128k (Eco), 192k (Balanced Studio), 
+     or 320k (Ultra Studio HQ).
+
+2. Autonomous AI Vibe Engine (vibe_engine.py):
+   - Prioritizes Deezer Curated Radio & Related Artist Graphs over uncurated feeds.
+   - Harmonic Seeding: Deck 3 is seeded by Deck 2 for seamless musical progression.
+   - Comprehensive Blacklisting: Cross-checks history, current track, Deck 2, Deck 3, and user queue.
+   - Evaluates vibe worthiness: blocks low-listen amateur tracks, skits (<65s), 
+     multi-hour podcasts (>1500s), karaoke, sped-up/slowed spam, hoodtrap, and type beats.
+   - Intelligent Anchor System: Preserves seed artist across autoplay skips with interactive lock.
+   - Anti-Repeat Radio Cooldown: Remembers recent tracks to prevent artist or title spam.
+
+3. Persistent SQLite WAL Database (store.py):
+   - Location: data/cache.db (with legacy fallback to data/bot_store.db)
+   - guild_settings: Stores volume, quality, autoplay, vibe mode, drift frequency, 
+     hit depth, cooldown, era filter, explicit shield, energy dial, and engine source.
+   - playback_history: Records all played tracks with guild ID, metadata, and timestamps.
+   - api_cache: Caches heavy MusicBrainz, Deezer, and Spotify API queries with TTL.
+
+4. Title Sanitizer & Normalizer (normalizer.py & taxonomy.py):
+   - Cleans remastered, deluxe, re-issue, spatial audio, and junk tags to ensure 
+     clean studio audio matching.
+
+===============================================================================
+4. DISCORD SLASH COMMANDS (22 Active Commands)
+===============================================================================
+
+Playback & Audio Controls:
+- /play <query> [source]      : Stream track/album/URL with choice of all 9 engines.
+- /playnow <query> [source]   : Instantly plays track right now (bypasses queue).
+- /skip                       : Skips current track to the next queued item.
+- /pause                      : Pauses current playback.
+- /resume                     : Resumes paused playback.
+- /stop                       : Stops playback, clears queue, and disconnects.
+- /queue                      : Displays paginated queue with runtime stats.
+- /nowplaying                 : Displays rich embed with interactive control buttons.
+- /volume <1-100>             : Sets volume percentage in real time.
+- /shuffle                    : Shuffles the server music queue (or re-rolls AI autoplay).
+- /loop <off|track|queue>     : Sets loop repeat mode.
+- /quality <auto|128k|192k|320k>: Switches streaming bitrate dynamically.
+- /history                    : Shows the last 10 tracks played in this server.
+
+AI DJ & Vibe Intelligence:
+- /dj [engine]                : Toggles Autoplay DJ or locks it to one of the 9 engines.
+- /brain                      : Displays live telemetry embed of active engine, anchor, 
+                                drift frequency, explicit shield, and last decision.
+
+Music Discovery & Discography:
+- /search <query> [source]    : Interactive dropdown search across all 9 engines.
+- /album <query>              : Canonical album card with interactive tracklist dropdown.
+- /artist <name>              : Artist profile with fan count, studio albums, and top hits.
+- /discography <artist>       : Categorized discography browser (Studio LPs, EPs, Live, Compilations).
+- /newreleases [limit]        : Fresh weekly editorial drops and studio releases.
+- /timemachine <year>         : Explores landmark albums from 1960 through 2026.
+- /charts [country]           : Queues live UK Top 40 or US Billboard chart tracks.
+- /radio                      : Streams from 94 curated cloud genre and vibe stations.
+
+===============================================================================
+5. SYSTEM REQUIREMENTS & SPECIFICATIONS
+===============================================================================
+- Runtime: Python 3.12+ (64-bit)
+- Libraries: discord.py[voice]>=2.3.2, PyNaCl>=1.5.0, aiohttp>=3.9.0, yt-dlp>=2024.8.0, 
+             ytmusicapi>=1.8.0, requests>=2.31.0, mutagen>=1.47.0, python-dotenv>=1.0.0, 
+             beautifulsoup4>=4.12.0
+- Optional Headless Testing: playwright>=1.40.0
+- Audio Backend: Local FFmpeg binary (Opus 48kHz Stereo)
+- Code Integrity: All project files strictly maintained under 1,000 lines.
+===============================================================================

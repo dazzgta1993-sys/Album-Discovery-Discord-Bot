@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Album Discovery - Control Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="stylesheet" href="/static/style.css?v=3.7">
+  <link rel="stylesheet" href="/static/command_center.css?v=4.0">
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">💿</div>
+      <div>
+        <div class="brand-title">Album Discovery Hub</div>
+        <div class="brand-subtitle">Discord Studio Command Center</div>
+      </div>
+    </div>
+
+    <div class="nav-center">
+      <select id="serverSelect" class="server-select" onchange="onServerChange()">
+        <option value="">Detecting Discord Servers...</option>
+      </select>
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        <span id="botUserLabel">Connecting...</span>
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <div class="badge-metric" id="pingBadge">⚡ 0ms</div>
+      <div class="badge-metric" id="uptimeBadge">⏱ 0s</div>
+    </div>
+  </header>
+
+  <!-- Main Grid -->
+  <main>
+    <!-- Command Center Quick Header Bar -->
+    <div class="command-center-header" style="grid-column: 1 / -1;">
+      <div class="command-top-row">
+        <div class="command-status-pills">
+          <div class="cmd-badge live-pulse">
+            <span class="pulse-dot"></span>
+            <span>SYSTEM ACTIVE</span>
+          </div>
+          <div class="cmd-badge" id="cmdDeckStatus">🎛️ Triple-Deck: Active</div>
+          <div class="cmd-badge" id="cmdAudioCodec">🎧 Opus 48kHz HQ</div>
+          <div class="cmd-badge" id="cmdLoopStatus" onclick="cycleLoopMode()" style="cursor:pointer;" title="Click to cycle loop mode">🔁 Loop: Off</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="btn-small" onclick="switchTab('timemachine')" style="background:rgba(157,78,221,0.2); border:1px solid rgba(157,78,221,0.4); color:#c77dff;">⏳ Time Machine</button>
+          <button class="btn-small" onclick="switchTab('radio')" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8;">📻 Cloud Radio</button>
+        </div>
+      </div>
+      <div class="fast-play-bar">
+        <input type="text" id="fastPlayInput" class="fast-play-input" placeholder="⚡ Fast-Play: Search song, artist, album, paste any YouTube / Spotify / Apple link..." onkeydown="if(event.key==='Enter') executeFastPlay(true)" />
+        <button class="btn-small" style="background:var(--accent-purple); color:#fff; font-weight:700; padding:0 16px;" onclick="executeFastPlay(true)">▶ Play Now</button>
+        <button class="btn-small" style="font-weight:700; padding:0 16px;" onclick="executeFastPlay(false)">+ Queue</button>
+      </div>
+    </div>
+    <!-- Left Deck: Now Playing & Controls -->
+    <div class="card player-deck">
+      <div class="voice-status-bar">
+        <div class="voice-info">
+          <span>🔊</span>
+          <span id="voiceStatusText">Connecting...</span>
+        </div>
+        <div id="voiceActionWrap">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <div class="cover-container">
+        <img id="trackCover" class="cover-img" src="" alt="Album Art" style="display:none;" />
+        <div id="coverPlaceholder" class="cover-placeholder">🎵</div>
+      </div>
+
+      <div class="track-meta">
+        <div class="track-title" id="trackTitle">Nothing Playing <span class="soundwave-visualizer" id="soundwaveVisualizer"><span class="soundwave-bar"></span><span class="soundwave-bar"></span><span class="soundwave-bar"></span><span class="soundwave-bar"></span></span></div>
+        <div class="track-artist" id="trackArtist">Ready to queue music</div>
+        <div class="track-extra">
+          <span class="tag-badge" id="sourceBadge">Deezer Studio</span>
+          <span id="requestedByBadge">Web Hub</span>
+          <span class="tag-badge anchor-badge" id="anchorBadge" onclick="toggleAnchorLock()" title="Click to lock current artist as vibe anchor">⚓ <span id="anchorArtistName">None</span> <span id="anchorLockIcon">🔓</span></span>
+        </div>
+      </div>
+
+      <!-- Seeker Section -->
+      <div class="seeker-section">
+        <div class="progress-bar-container" id="progressBar" onclick="onSeekerClick(event)" title="Click to seek audio">
+          <div class="progress-bar-fill" id="progressFill">
+            <span class="progress-knob"></span>
+          </div>
+        </div>
+        <div class="time-labels">
+          <span id="timeElapsed">0:00</span>
+          <span id="timeTotal">0:00</span>
+        </div>
+      </div>
+
+      <!-- Center Controls -->
+      <div class="controls-main">
+        <button class="btn-icon" title="Stop Playback" onclick="sendControl('stop')">⏹</button>
+        <button class="btn-icon" title="Shuffle Queue" onclick="sendControl('shuffle')">🔀</button>
+        <button class="btn-icon btn-play-pause" id="btnPlayPause" title="Play / Pause" onclick="togglePlayPause()">▶</button>
+        <button class="btn-icon" title="Skip Song" onclick="skipTrack()">⏭</button>
+        <button class="btn-icon" id="btnLoop" title="Cycle Loop Mode" onclick="sendControl('set_loop')">🔁</button>
+      </div>
+
+      <!-- Quick Toggles -->
+      <div class="toggles-bar">
+        <button class="toggle-btn" id="btnAutoplay" onclick="toggleAutoplay()">✨ Autoplay: ON</button>
+        <button class="toggle-btn" id="btnQuality" onclick="cycleQuality()">🎧 HQ Audio</button>
+        <button class="toggle-btn" id="btnLoopText" onclick="sendControl('set_loop')">Loop: Off</button>
+      </div>
+
+      <!-- Live Browser Audio Monitor -->
+      <div style="display:flex; flex-shrink:0;">
+        <button class="toggle-btn active" id="btnAudioMonitor" style="flex:1; padding:7px 10px; font-weight:700; font-size:0.75rem; background:rgba(157,78,221,0.08); border-color:rgba(157,78,221,0.25);" onclick="toggleAudioMonitor()">🎧 Listen Live in Browser: ON</button>
+      </div>
+      <audio id="browserMonitorAudio" preload="none"></audio>
+      <audio id="browserDjAudio" preload="none"></audio>
+
+      <!-- Volume Row -->
+      <div class="volume-row">
+        <span id="volIcon" style="cursor:pointer;" onclick="toggleMute()">🔊</span>
+        <input type="range" class="volume-slider" id="volSlider" min="0" max="100" value="100" oninput="onVolumeInput(this.value)" onmousedown="isDraggingVol=true" onmouseup="isDraggingVol=false" ontouchstart="isDraggingVol=true" ontouchend="isDraggingVol=false" />
+        <span class="volume-pct" id="volPct">100%</span>
+      </div>
+    </div>
+
+    <!-- Right Deck: Tabs (Queue, Search, Charts, Logs) -->
+    <div class="card hub-deck">
+      <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab('queue', this)"><span>📑 Queue</span> <span class="tab-badge" id="queueBadgeCount">0</span></button>
+        <button class="tab-btn" onclick="switchTab('history', this)"><span>🕒 History</span> <span class="tab-badge" id="historyBadgeCount">0</span></button>
+        <button class="tab-btn" onclick="switchTab('brain', this)">🧠 Brain DJ</button>
+        <button class="tab-btn" onclick="switchTab('search', this)">🔍 Search</button>
+        <button class="tab-btn" onclick="switchTab('charts', this)">🔥 Charts</button>
+        <button class="tab-btn" onclick="switchTab('discography', this)">💿 Discography</button>
+        <button class="tab-btn" onclick="switchTab('timemachine', this)">⏳ Time Machine</button>
+        <button class="tab-btn" onclick="switchTab('radio', this)">📻 Cloud Radio</button>
+        <button class="tab-btn" onclick="switchTab('logs', this)">📜 Logs</button>
+      </div>
+
+      <!-- Queue Tab -->
+      <div class="tab-content active" id="tabQueue">
+        <div class="queue-actions">
+          <span id="queueSummaryText">0 songs in queue</span>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-small" onclick="sendControl('shuffle')">🔀 Shuffle</button>
+            <button class="btn-small btn-danger" onclick="clearQueue()">🗑 Clear Queue</button>
+          </div>
+        </div>
+
+        <div class="preloaded-banner" id="preloadedBanner" style="display:none;">
+          <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+            <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+              <span style="width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 6px #22c55e; flex-shrink:0;"></span>
+              <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><strong style="color:#4ade80;" id="preloadedLabel">Deck 2 Ready</strong>: <span id="preloadedTitle" style="color:var(--text-main);"></span></span>
+            </div>
+            <span style="font-size:0.7rem; color:var(--text-muted); font-weight:600; flex-shrink:0; margin-left:8px;">⚡ ZERO GAP</span>
+          </div>
+          <div id="deck3BannerRow" style="display:none; align-items:center; justify-content:space-between; width:100%; font-size:0.78rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px; margin-top:2px;">
+            <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+              <span style="width:7px; height:7px; border-radius:50%; background:#38bdf8; box-shadow:0 0 6px #38bdf8; flex-shrink:0;"></span>
+              <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><strong style="color:#38bdf8;" id="deck3Label">Deck 3 Cued</strong>: <span id="deck3Title" style="color:var(--text-muted);"></span></span>
+            </div>
+            <span style="font-size:0.7rem; color:#38bdf8; font-weight:600; flex-shrink:0; margin-left:8px;">⚡ 2-STEP PIPELINE</span>
+          </div>
+        </div>
+
+        <div class="track-list" id="queueList">
+          <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <div>The queue is currently empty.</div>
+            <div style="font-size:0.8rem; color:var(--text-muted)">Use the Search tab or Trending Charts to add tracks!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Play History Tab -->
+      <div class="tab-content" id="tabHistory">
+        <div class="queue-actions">
+          <span id="historySummaryText">0 songs in history</span>
+          <button class="btn-small" onclick="pollGuildState(currentGuildId)">🔄 Refresh History</button>
+        </div>
+        <div class="track-list" id="historyList">
+          <div class="empty-state">
+            <div class="empty-icon">🕒</div>
+            <div>No playback history yet.</div>
+            <div style="font-size:0.8rem; color:var(--text-muted)">Played tracks will automatically be recorded here!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Tab -->
+      <div class="tab-content" id="tabSearch">
+        <div class="search-bar-wrap">
+          <input type="text" class="search-input" id="searchInput" placeholder="Search track, artist, album, or paste URL..." onkeydown="if(event.key==='Enter') executeSearch()" />
+          <select class="source-select" id="searchSource">
+            <option value="auto" selected>🌐 Multi-Engine Auto (Universal)</option>
+            <option value="ytmusic">🔴 YouTube Music Radio</option>
+            <option value="youtube">▶️ YouTube Video & Live</option>
+            <option value="deezer">🟣 Deezer Studio</option>
+            <option value="spotify">🟢 Spotify Catalog</option>
+            <option value="apple">🍎 Apple Music</option>
+            <option value="soundcloud">🟠 SoundCloud (Mixes & Underground)</option>
+            <option value="musicbrainz">🏛️ MusicBrainz Discography</option>
+            <option value="charts">📊 Official Charts Top 40</option>
+            <option value="albums">💿 Full Albums & LPs</option>
+          </select>
+          <button class="btn-small" style="padding:0 18px;" onclick="executeSearch()">Search</button>
+        </div>
+
+        <div class="track-list" id="searchResults">
+          <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <div>Search for official tracks, Apple Music drops, or live recordings across Deezer, Apple & YouTube.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trending Charts Tab -->
+      <div class="tab-content" id="tabCharts">
+        <div class="search-bar-wrap" style="margin-bottom:12px;">
+          <select class="source-select" id="chartCountrySelect" onchange="loadCharts(false)" style="min-width:260px; font-weight:600;">
+            <option value="gb" selected>🇬🇧 UK Official Top 50 Singles</option>
+            <option value="us">🇺🇸 US Billboard Hot 50 Singles</option>
+            <option value="global">🌍 Global Top 50 Hits</option>
+            <option value="albums_gb">💿 UK Official Top 50 Albums</option>
+            <option value="albums_us">🏆 US Billboard 200 Albums</option>
+          </select>
+          <div style="flex:1;"></div>
+          <button class="btn-small" onclick="loadCharts(true)">🔄 Refresh Charts</button>
+        </div>
+        <div class="queue-actions" style="margin-bottom:10px;">
+          <span id="chartsHeaderTitle" style="font-weight:700; color:var(--text-bright);">UK Official Top 50 Singles</span>
+          <span class="tag-badge" id="chartsBadge" style="background:rgba(199,125,255,0.15); color:#c77dff; border:1px solid rgba(199,125,255,0.3);">🇬🇧 UK OFFICIAL SINGLES</span>
+        </div>
+        <div class="track-list" id="chartsList">
+          <div class="empty-state">
+            <div class="empty-icon">⏳</div>
+            <div>Loading live trending charts...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Discography & Albums Tab -->
+      <div class="tab-content" id="tabDiscography">
+        <div class="search-bar-wrap">
+          <input type="text" class="search-input" id="discoArtistInput" placeholder="Enter artist name (e.g. Daft Punk, Queen, Pink Floyd)..." onkeydown="if(event.key==='Enter') executeDiscographySearch()" />
+          <select class="source-select" id="discoCategoryFilter" onchange="filterDiscographyCategory()">
+            <option value="All" selected>All Categories (Full Discography)</option>
+            <option value="Studio Albums">💿 Studio Albums</option>
+            <option value="Singles">📀 Singles</option>
+            <option value="EPs">⚡ EPs</option>
+            <option value="Compilations">📦 Compilations</option>
+            <option value="Live Albums">🎸 Live Albums</option>
+            <option value="Remixes">🎛️ Remixes</option>
+          </select>
+          <button class="btn-small" style="padding:0 18px;" onclick="executeDiscographySearch()">Explore</button>
+        </div>
+        <div id="discoArtistHeader" style="margin-bottom:10px;"></div>
+        <div class="track-list" id="discoAlbumList">
+          <div class="empty-state">
+            <div class="empty-icon">💿</div>
+            <div>Explore complete artist discographies classified with MusicBrainz & Apple Music.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Brain & Autoplay System Control Center Tab -->
+      <div class="tab-content" id="tabBrain" style="overflow-y: scroll !important; -webkit-overflow-scrolling: touch; min-height: 0; flex: 1; padding-right: 12px; padding-bottom: 60px;">
+        <div class="queue-actions brain-header-sticky">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-weight:700; color:var(--text-bright);">🧠 Vibe Engine & AI Autoplay Control Hub</span>
+            <span class="tag-badge" style="background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3);">ACTIVE</span>
+          </div>
+          <button class="btn-small" onclick="saveBrainConfig()">💾 Save Brain Settings</button>
+        </div>
+
+        <!-- Quick Jump Navigation Menu -->
+        <div class="brain-nav-menu" style="display:flex; gap:6px; overflow-x:auto; padding:4px 0 10px 0; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:12px; flex-shrink:0;">
+          <button class="btn-micro" onclick="document.getElementById('sec-matrix').scrollIntoView({behavior:'smooth', block:'start'})">🎯 Discovery Matrix</button>
+          <button class="btn-micro" onclick="document.getElementById('sec-frequency').scrollIntoView({behavior:'smooth', block:'start'})">🔀 Drift & Depth</button>
+          <button class="btn-micro" onclick="document.getElementById('sec-guardrails').scrollIntoView({behavior:'smooth', block:'start'})">⚡ Preload & Shield</button>
+          <button class="btn-micro" onclick="document.getElementById('sec-cooldown').scrollIntoView({behavior:'smooth', block:'start'})">📻 Radio Anti-Repeat</button>
+          <button class="btn-micro" onclick="document.getElementById('sec-era').scrollIntoView({behavior:'smooth', block:'start'})">⏳ Decade & Era</button>
+          <button class="btn-micro" onclick="document.getElementById('sec-djhost').scrollIntoView({behavior:'smooth', block:'start'})">🎙️ AI DJ Host</button>
+          <button class="btn-micro" onclick="document.getElementById('sec-energy').scrollIntoView({behavior:'smooth', block:'start'})">🌊 Energy Dial</button>
+          <button class="btn-micro" onclick="document.getElementById('sec-engine').scrollIntoView({behavior:'smooth', block:'start'})">🎛️ Engine Source</button>
+        </div>
+
+        <!-- Live Telemetry Card -->
+        <div class="brain-telemetry-card">
+          <div class="telemetry-item">
+            <span class="telemetry-label">CURRENT VIBE ANCHOR</span>
+            <span class="telemetry-val" id="telemetryAnchor">Auto Anchor</span>
+          </div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">AUTOPLAY CHAIN</span>
+            <span class="telemetry-val" id="telemetryChain">0 tracks</span>
+          </div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">DECK 2 STANDBY</span>
+            <span class="telemetry-val" id="telemetryDeck2" style="color:#4ade80;">Preloaded</span>
+          </div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">DECK 3 PIPELINE</span>
+            <span class="telemetry-val" id="telemetryDeck3" style="color:#38bdf8;">Cued</span>
+          </div>
+          <div class="telemetry-item" style="grid-column: 1 / -1;">
+            <span class="telemetry-label">LAST BRAIN DECISION</span>
+            <span class="telemetry-val" id="telemetryDecision" style="font-size:0.8rem; font-weight:500; color:#cbd5e1;">Standby</span>
+          </div>
+        </div>
+
+        <!-- Vibe Drift Modes -->
+        <div class="brain-section-title">🎯 VIBE DISCOVERY MATRIX (How often & where it explores)</div>
+        <div class="brain-modes-grid">
+          <div class="brain-mode-card" id="mode-deep_dive" onclick="selectVibeMode('deep_dive')">
+            <div class="mode-icon">🎯</div>
+            <div class="mode-title">Artist Deep Dive</div>
+            <div class="mode-desc">Stays 100% locked on current artist's full studio albums, singles & B-sides. Zero drift.</div>
+          </div>
+          <div class="brain-mode-card" id="mode-collabs" onclick="selectVibeMode('collabs')">
+            <div class="mode-icon">🤝</div>
+            <div class="mode-title">Collabs & Circle</div>
+            <div class="mode-desc">Explores immediate collaborators, producers, features & affiliated crew.</div>
+          </div>
+          <div class="brain-mode-card active" id="mode-balanced" onclick="selectVibeMode('balanced')">
+            <div class="mode-icon">🎛️</div>
+            <div class="mode-title">Smart Vibe (Default)</div>
+            <div class="mode-desc">Plays a cluster of songs before smoothly transitioning to closely related artists.</div>
+          </div>
+          <div class="brain-mode-card" id="mode-discovery" onclick="selectVibeMode('discovery')">
+            <div class="mode-icon">🌌</div>
+            <div class="mode-title">Wild Discovery</div>
+            <div class="mode-desc">Adventurous rabbit-hole exploration across similar genres, decades & fresh radar.</div>
+          </div>
+        </div>
+
+        <!-- Drift Frequency Slider & Controls -->
+        <div id="sec-frequency" class="brain-sliders-grid">
+          <div class="brain-control-box">
+            <div class="control-box-header">
+              <span>🔀 Artist Drift Frequency</span>
+              <span class="control-val-badge" id="driftFreqVal">Every 1 song</span>
+            </div>
+            <input type="range" class="volume-slider" id="driftFreqSlider" min="1" max="10" value="1" oninput="onDriftSliderChange(this.value)" />
+            <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+              <span>Fast Drift (1 song)</span>
+              <span>Balanced (3 songs)</span>
+              <span>Long Stay (10 songs)</span>
+            </div>
+          </div>
+
+          <div class="brain-control-box">
+            <div class="control-box-header">
+              <span>📊 Catalog Depth Filter</span>
+            </div>
+            <div class="filter-pills-row">
+              <button class="pill-btn" id="depth-top_hits" onclick="selectHitDepth('top_hits')">🔥 Top Hits Only</button>
+              <button class="pill-btn active" id="depth-balanced" onclick="selectHitDepth('balanced')">⚖️ Balanced</button>
+              <button class="pill-btn" id="depth-deep_cuts" onclick="selectHitDepth('deep_cuts')">💎 Deep Cuts & B-Sides</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Deck Preloader Pipeline & Zero-Gap Buffers -->
+        <div id="sec-guardrails" class="brain-sliders-grid" style="margin-top:12px;">
+          <div class="brain-control-box">
+            <div class="control-box-header">
+              <span>⚡ Deck 2 Standby Preloader</span>
+              <button class="btn-small" id="btnDeck2Toggle" onclick="toggleDeck2Pref()">⚡ Deck 2: ON</button>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">
+              Preloads audio stream &amp; Opus decode ahead of time so songs drop with zero silent gap (&lt;50ms).
+            </div>
+          </div>
+
+          <div class="brain-control-box">
+            <div class="control-box-header">
+              <span>🎛️ Deck 3 Pipeline Preloader</span>
+              <button class="btn-small" id="btnDeck3Toggle" onclick="toggleDeck3Pref()" style="color:#38bdf8;">🎛️ Deck 3: ON</button>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">
+              Pre-resolves metadata &amp; streams 2 tracks ahead for zero buffering, double-skips &amp; harmonic flow.
+            </div>
+          </div>
+        </div>
+
+        <!-- Content Shield & Broadcast Separation -->
+        <div class="brain-sliders-grid" style="margin-top:12px;">
+          <div class="brain-control-box">
+            <div class="control-box-header">
+              <span>🛡️ Explicit Content Shield</span>
+            </div>
+            <div class="filter-pills-row">
+              <button class="pill-btn active" id="exp-allow" onclick="selectExplicit('allow')">Explicit Allowed</button>
+              <button class="pill-btn" id="exp-clean_only" onclick="selectExplicit('clean_only')">Radio Edit Clean</button>
+            </div>
+          </div>
+
+          <div class="brain-control-box">
+            <div class="control-box-header">
+              <span id="sec-cooldown">📻 No-Repeat Artist Guardrail</span>
+            </div>
+            <div class="filter-pills-row">
+              <button class="pill-btn active" id="cooldown-10" onclick="selectArtistCooldown(10)">🔒 Strict (10 Songs)</button>
+              <button class="pill-btn" id="cooldown-5" onclick="selectArtistCooldown(5)">⚖️ Balanced (5 Songs)</button>
+              <button class="pill-btn" id="cooldown-2" onclick="selectArtistCooldown(2)">⚡ Light (2 Songs)</button>
+            </div>
+            <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+              Authentic broadcast radio rule: blocks the same artist from repeating within N songs.
+            </div>
+          </div>
+        </div>
+
+        <!-- Advanced Radio Separation & Era Anchors -->
+        <div class="brain-sliders-grid" style="margin-top:12px;">
+          <div class="brain-control-box">
+            <div class="control-box-header">
+              <span id="sec-era">⏳ Decade & Era Lock</span>
+            </div>
+            <div class="filter-pills-row">
+              <button class="pill-btn active" id="era-all" onclick="selectEraFilter('all')">🌐 All Eras</button>
+              <button class="pill-btn" id="era-2020s" onclick="selectEraFilter('2020s')">🔥 2020s</button>
+              <button class="pill-btn" id="era-2010s" onclick="selectEraFilter('2010s')">💿 2010s</button>
+              <button class="pill-btn" id="era-2000s" onclick="selectEraFilter('2000s')">📼 2000s</button>
+              <button class="pill-btn" id="era-classics" onclick="selectEraFilter('classics')">📻 80s/90s</button>
+            </div>
+          </div>
+
+          <div class="brain-control-box">
+            <div class="control-box-header">
+              <span id="sec-energy">🌊 Energy & Mood Flow Dial</span>
+            </div>
+            <div class="filter-pills-row">
+              <button class="pill-btn active" id="energy-auto" onclick="selectVibeEnergy('auto')">🌊 Natural Flow (Matched)</button>
+              <button class="pill-btn" id="energy-high" onclick="selectVibeEnergy('high')">⚡ High Energy (Upbeat & Party)</button>
+              <button class="pill-btn" id="energy-chill" onclick="selectVibeEnergy('chill')">🌙 Chill & Mellow (Late Night)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Radio DJ Host Section -->
+        <div class="brain-sliders-grid" style="margin-top:12px;">
+          <div class="brain-control-box" style="grid-column: 1 / -1;">
+            <div class="control-box-header">
+              <span id="sec-djhost">🎙️ Live AI Radio DJ Host (End-of-Track Voice Segue)</span>
+              <div style="display:flex; gap:8px;">
+                <button class="btn-small" id="btnDjTrigger" onclick="triggerDjDropNow()" style="background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4);">🎙️ Drop DJ Voice Now</button>
+                <button class="btn-small" id="btnDjToggle" onclick="toggleDjTalkover()" style="color:#4ade80;">🎙️ DJ Host: ON</button>
+              </div>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">
+              Plays a punchy 3–5s broadcast radio intro when the song ends before the next beat drops (zero interference with music).
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-size:0.75rem; color:var(--text-muted); width:95px; flex-shrink:0;">Cadence:</span>
+                <div class="filter-pills-row" style="margin-top:0;">
+                  <button class="pill-btn active" id="djfreq-3" onclick="selectDjFreq(3)">📻 Every 3 Songs (Radio)</button>
+                  <button class="pill-btn" id="djfreq-5" onclick="selectDjFreq(5)">⚡ Every 5 Songs</button>
+                  <button class="pill-btn" id="djfreq-1" onclick="selectDjFreq(1)">🔥 Every Song</button>
+                  <button class="pill-btn" id="djfreq-0" onclick="selectDjFreq(0)">🚫 Off</button>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-size:0.75rem; color:var(--text-muted); width:95px; flex-shrink:0;">DJ Persona:</span>
+                <div class="filter-pills-row" style="margin-top:0;">
+                  <button class="pill-btn active" id="djvoice-classic_fm" onclick="selectDjVoice('classic_fm')">📻 Classic FM (Christopher)</button>
+                  <button class="pill-btn" id="djvoice-hype_club" onclick="selectDjVoice('hype_club')">⚡ Hype Club (Guy)</button>
+                  <button class="pill-btn" id="djvoice-late_night" onclick="selectDjVoice('late_night')">🌙 Late Night Chill (Eric)</button>
+                  <button class="pill-btn" id="djvoice-bbc_radio" onclick="selectDjVoice('bbc_radio')">🇬🇧 BBC Radio 1 (Ryan)</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Engine Intelligence Source -->
+        <div class="brain-sliders-grid" style="margin-top:12px;">
+          <div class="brain-control-box" style="grid-column: 1 / -1;">
+            <div class="control-box-header">
+              <span id="sec-engine">🎛️ Recommendation Engine Platform</span>
+            </div>
+            <div class="filter-pills-row">
+              <button class="pill-btn active" id="engine-auto" onclick="selectEngineSource('auto')">🌐 Multi-Engine Auto</button>
+              <button class="pill-btn" id="engine-ytmusic" onclick="selectEngineSource('ytmusic')">🔴 YouTube Music Radio</button>
+              <button class="pill-btn" id="engine-youtube" onclick="selectEngineSource('youtube')">▶️ YouTube Video/Live</button>
+              <button class="pill-btn" id="engine-deezer" onclick="selectEngineSource('deezer')">🟣 Deezer Studio</button>
+              <button class="pill-btn" id="engine-spotify" onclick="selectEngineSource('spotify')">🟢 Spotify</button>
+              <button class="pill-btn" id="engine-apple" onclick="selectEngineSource('apple')">🍎 Apple Music</button>
+              <button class="pill-btn" id="engine-soundcloud" onclick="selectEngineSource('soundcloud')">🟠 SoundCloud</button>
+              <button class="pill-btn" id="engine-musicbrainz" onclick="selectEngineSource('musicbrainz')">🏛️ MusicBrainz</button>
+              <button class="pill-btn" id="engine-charts" onclick="selectEngineSource('charts')">📊 Official Charts</button>
+            </div>
+            <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+              Select which platform recommendation algorithm powers the AI Autoplay DJ suggestions.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Time Machine Tab -->
+      <div class="tab-content" id="tabTimemachine">
+        <!-- Time Machine Decade & Era Sub-Nav Menu -->
+        <div class="sub-nav-menu timemachine-nav-menu">
+          <button class="sub-nav-pill active" onclick="selectDecade(1999, this)">🔥 90s Golden Era</button>
+          <button class="sub-nav-pill" onclick="selectDecade(2024, this)">⚡ 2020s Landmark</button>
+          <button class="sub-nav-pill" onclick="selectDecade(2015, this)">💿 2010s Streaming</button>
+          <button class="sub-nav-pill" onclick="selectDecade(2004, this)">📼 2000s Y2K Era</button>
+          <button class="sub-nav-pill" onclick="selectDecade(1984, this)">📻 80s Retrowave</button>
+          <button class="sub-nav-pill" onclick="selectDecade(1975, this)">🎸 70s Classic Rock</button>
+          <button class="sub-nav-pill" onclick="selectDecade(1967, this)">☮️ 60s Psychedelic</button>
+        </div>
+
+        <div class="search-bar-wrap" style="margin-bottom:10px;">
+          <select class="source-select" id="tmYearSelect" onchange="loadTimeMachine(this.value)" style="min-width:180px; font-weight:700;">
+            <option value="1999" selected>Year 1999</option>
+          </select>
+          <div style="flex:1;"></div>
+          <button class="btn-small" onclick="loadTimeMachine(document.getElementById('tmYearSelect').value)">🔄 Refresh Year</button>
+        </div>
+
+        <!-- Genre Filter Sub-Nav Menu for Time Machine -->
+        <div class="sub-nav-menu timemachine-genre-nav" style="border-bottom:none; margin-bottom:8px; padding-bottom:0;">
+          <button class="sub-nav-pill active" onclick="selectTimeMachineGenre('all', this)">✨ All Genres</button>
+          <button class="sub-nav-pill" onclick="selectTimeMachineGenre('rock', this)">🎸 Rock & Alternative</button>
+          <button class="sub-nav-pill" onclick="selectTimeMachineGenre('hip-hop', this)">🎤 Hip-Hop & Rap</button>
+          <button class="sub-nav-pill" onclick="selectTimeMachineGenre('electronic', this)">🎧 Electronic & Dance</button>
+          <button class="sub-nav-pill" onclick="selectTimeMachineGenre('pop', this)">🌟 Pop & R&B</button>
+        </div>
+
+        <div class="queue-actions">
+          <span id="tmSummaryText">⏳ Landmark Albums & Timeless Classics (1960 - 2026)</span>
+          <span class="tag-badge" id="tmYearBadge" style="background:rgba(199,125,255,0.15); color:#c77dff; border:1px solid rgba(199,125,255,0.3);">YEAR 1999</span>
+        </div>
+        <div class="tm-albums-grid" id="timemachineGrid">
+          <div class="empty-state">
+            <div class="empty-icon">⏳</div>
+            <div>Select a year or decade to travel through music history!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cloud DJ Radio Tab -->
+      <div class="tab-content" id="tabRadio">
+        <!-- Cloud Radio Category Sub-Nav Menu -->
+        <div class="sub-nav-menu radio-nav-menu">
+          <button class="sub-nav-pill active" onclick="selectRadioCategory('all', this)">✨ All Stations (<span id="pillCountAll">94</span>)</button>
+          <button class="sub-nav-pill" onclick="selectRadioCategory('electronic', this)">🎧 Electronic & Cyberpunk</button>
+          <button class="sub-nav-pill" onclick="selectRadioCategory('rock', this)">🎸 Rock & Metal</button>
+          <button class="sub-nav-pill" onclick="selectRadioCategory('hiphop', this)">🎤 Hip-Hop & Rap</button>
+          <button class="sub-nav-pill" onclick="selectRadioCategory('lofi', this)">☕ Lofi & Chillhop</button>
+          <button class="sub-nav-pill" onclick="selectRadioCategory('decades', this)">📻 80s & 90s Classics</button>
+          <button class="sub-nav-pill" onclick="selectRadioCategory('charts', this)">📊 Billboard & Live Charts</button>
+          <button class="sub-nav-pill" onclick="selectRadioCategory('ambient', this)">🌙 Ambient & Jazz</button>
+          <button class="sub-nav-pill" onclick="selectRadioCategory('pop', this)">🌟 Pop & Global</button>
+        </div>
+
+        <div class="search-bar-wrap" style="margin-bottom:10px;">
+          <input type="text" class="search-input" id="radioFilterInput" placeholder="Filter live cloud stations (e.g. Lofi, Rock, Synthwave, Cyberpunk, 80s, Chill)..." oninput="filterRadioStations(this.value)" />
+          <button class="btn-small" onclick="loadCloudRadio()">🔄 Refresh Stations</button>
+        </div>
+        <div class="queue-actions">
+          <span id="radioSummaryText">📻 94 Curated High-Definition Cloud Radio Stations</span>
+          <span class="tag-badge" id="radioCountBadge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">94 STATIONS</span>
+        </div>
+        <div class="radio-stations-grid" id="radioStationsGrid">
+          <div class="empty-state">
+            <div class="empty-icon">📻</div>
+            <div>Loading cloud radio stations...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs Tab -->
+      <div class="tab-content" id="tabLogs">
+        <div class="queue-actions">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span>Live Bot Diagnostics</span>
+            <span class="tag-badge" style="background:rgba(34,197,94,0.15); color:#4ade80; border:1px solid rgba(34,197,94,0.3); font-size:0.65rem;">🟢 LIVE AUTO-STREAMING</span>
+          </div>
+          <button class="btn-small" onclick="loadLogs(true)">🔄 Force Refresh</button>
+        </div>
+        <div class="log-filter-bar">
+          <button class="log-filter-btn active" onclick="setLogFilter('all', this)">🔘 All</button>
+          <button class="log-filter-btn" onclick="setLogFilter('search', this)">🔍 Searches</button>
+          <button class="log-filter-btn" onclick="setLogFilter('audio', this)">🎧 Audio & Voice</button>
+          <button class="log-filter-btn" onclick="setLogFilter('bot', this)">🤖 Bot & System</button>
+          <button class="log-filter-btn" onclick="setLogFilter('errors', this)">⚠️ Errors Only</button>
+        </div>
+        <pre id="logsContainer" style="background:#0e1017; border:1px solid var(--border-color); padding:14px; border-radius:var(--radius-md); font-family:monospace; font-size:0.76rem; color:#a3e635; overflow-y:auto; flex:1; max-height:450px; white-space:pre-wrap;"></pre>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Floating Toast Notification -->
+  <div class="toast-box" id="toastBox">
+    <span id="toastIcon">✨</span>
+    <span id="toastMsg">Action completed</span>
+  </div>
+
+  <script src="/static/app.js?v=4.0"></script>
+  <script src="/static/command_center.js?v=4.0"></script>
+</body>
+</html>

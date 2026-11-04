@@ -1,0 +1,40 @@
+# Environment & Secrets
+.env
+.env.*
+*.env
+
+# Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Database & Runtime Data
+data/
+*.db
+*.sqlite3
+
+# Audio and DJ Cache
+*.mp3
+*.wav
+*.ogg
+*.opus
+data/dj_cache/
+
+# Logs
+*.log
+logs/
+
+# Archives & Distribution
+*.zip
+*.tar.gz
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

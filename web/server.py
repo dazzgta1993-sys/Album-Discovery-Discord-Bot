@@ -875,7 +875,6 @@ async def api_stream(request: web.Request) -> web.StreamResponse:
     return response
 
 async def api_logs(request: web.Request) -> web.Response:
-    log_type = request.query.get("type", "all").lower().strip()
     logs_dir = os.path.join(os.path.dirname(WEB_DIR), "logs")
     file_map = {
         "bot": os.path.join(logs_dir, "bot.log"),
@@ -883,6 +882,14 @@ async def api_logs(request: web.Request) -> web.Response:
         "audio": os.path.join(logs_dir, "audio.log"),
         "errors": os.path.join(logs_dir, "errors.log"),
     }
+    if request.method == "POST":
+        for p in file_map.values():
+            if os.path.exists(p):
+                try:
+                    with open(p, "w", encoding="utf-8") as f: f.truncate(0)
+                except Exception: pass
+        return web.json_response({"status": "ok", "cleared": True})
+    log_type = request.query.get("type", "all").lower().strip()
     lines = []
     if log_type in file_map:
         target_path = file_map[log_type]
@@ -952,6 +959,7 @@ def create_web_app(bot: discord.Client) -> web.Application:
     app.router.add_get("/api/album/tracks", api_album_tracks)
     app.router.add_get("/api/guild/{guild_id}/dna", api_dna)
     app.router.add_get("/api/logs", api_logs)
+    app.router.add_post("/api/logs", api_logs)
     app.router.add_get("/api/timemachine", api_timemachine)
     app.router.add_get("/api/radio", api_radio)
     app.router.add_get("/api/guild/{guild_id}/stream", api_stream)

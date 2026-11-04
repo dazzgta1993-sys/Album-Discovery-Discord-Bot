@@ -835,6 +835,21 @@ async function loadLogs(forceScroll = false) {
   }
 }
 
+async function clearLogsUI() {
+  if (!confirm("Clear all live bot diagnostic logs?")) return;
+  try {
+    const res = await fetch("/api/logs", { method: "POST" });
+    const data = await res.json();
+    if (data.status === "ok") {
+      const pre = document.getElementById("logsContainer");
+      if (pre) pre.innerText = "No log entries recorded yet.";
+      showToast("Diagnostic logs cleared", "🗑️");
+    }
+  } catch (e) {
+    showToast("Failed to clear logs", "⚠️");
+  }
+}
+
 function escapeHtml(str) {
   if (!str) return "";
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");

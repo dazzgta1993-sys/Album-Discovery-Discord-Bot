@@ -266,6 +266,14 @@ async def api_control(request: web.Request) -> web.Response:
             "is_locked": player.is_anchor_locked,
             "anchor": player.vibe_anchor_artist or "None"
         })
+    elif action == "clear_history":
+        player.history.clear()
+        try:
+            from app import store
+            store.save_history(player.guild.id, [])
+        except Exception:
+            pass
+        return web.json_response({"status": "ok", "message": "History cleared"})
     elif action == "set_volume":
         try:
             vol = float(value) / 100.0

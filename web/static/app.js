@@ -679,6 +679,7 @@ async function joinSelectedVoice() {
 }
 async function removeQueueItem(index) { await fetch("/api/guild/" + currentGuildId + "/queue/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index }) }); showToast("Track removed from queue"); pollGuildState(currentGuildId); }
 async function clearQueue() { if (!confirm("Are you sure you want to clear the entire queue?")) return; await fetch("/api/guild/" + currentGuildId + "/queue/clear", { method: "POST" }); showToast("Queue cleared"); pollGuildState(currentGuildId); }
+async function clearHistory() { if (!confirm("Clear playback history and reset session DNA?")) return; await fetch("/api/guild/" + currentGuildId + "/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "clear_history" }) }); showToast("Playback history cleared"); pollGuildState(currentGuildId); if (typeof window.refreshMusicDna === "function") setTimeout(window.refreshMusicDna, 200); }
 async function moveQueueItem(from_index, to_index) { await fetch("/api/guild/" + currentGuildId + "/queue/move", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from_index, to_index }) }); pollGuildState(currentGuildId); }
 async function queuePlayNow(index) {
   const qItem = document.querySelectorAll("#queueList .queue-item")[index];

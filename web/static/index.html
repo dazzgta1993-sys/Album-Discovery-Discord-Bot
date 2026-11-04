@@ -214,7 +214,10 @@
       <div class="tab-content" id="tabHistory">
         <div class="queue-actions">
           <span id="historySummaryText">0 songs in history</span>
-          <button class="btn-small" onclick="pollGuildState(currentGuildId)">🔄 Refresh History</button>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-small" onclick="pollGuildState(currentGuildId)">🔄 Refresh History</button>
+            <button class="btn-small btn-danger" onclick="clearHistory()">🗑️ Clear History</button>
+          </div>
         </div>
         <div class="track-list" id="historyList">
           <div class="empty-state">

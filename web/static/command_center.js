@@ -642,3 +642,148 @@ window.updateTasteStats = function(profile) {
     txt.innerText = `${likes} 👍 | ${dislikes} 👎`;
   }
 };
+
+
+// ============================================================
+// Music DNA & Genre Spectrum Visualization Engine
+// ============================================================
+window.refreshMusicDna = async function() {
+  const guildId = typeof getActiveGuildId === "function" ? getActiveGuildId() : (window.currentGuildId || "");
+  if (!guildId) return;
+
+  try {
+    const res = await fetch(`/api/guild/${guildId}/dna`);
+    if (!res.ok) return;
+    const dna = await res.json();
+    window.renderMusicDnaGraph(dna);
+  } catch (err) {
+    console.error("refreshMusicDna error:", err);
+  }
+};
+
+window.renderMusicDnaGraph = function(dna) {
+  if (!dna) return;
+
+  const genreIcons = {
+    "Pop & Mainstream": "🌟",
+    "Dance & Electronic": "🎧",
+    "Rock & Alternative": "🎸",
+    "Hip-Hop & Rap": "🎤",
+    "R&B & Soul": "🎷",
+    "Indie & Folk": "🌿",
+    "Soundtrack & Film": "🎬",
+    "Jazz & Blues": "🎺",
+    "Metal & Hardcore": "⚡",
+    "Latin & World": "💃"
+  };
+
+  // Subtitle
+  const subEl = document.getElementById("dnaSummarySubtitle");
+  if (subEl) {
+    const total = dna.total_analyzed ?? dna.total_tracks_analyzed ?? 0;
+    const dom = dna.dominant_genre || dna.primary_genre || "Awaiting Tracks";
+    const sub = dna.dominant_subgenre ? ` • Style: ${dna.dominant_subgenre}` : "";
+    subEl.innerText = `${total} session tracks analyzed • Dominant Genre: ${dom}${sub}`;
+  }
+
+  // Multi-color spectrum bar
+  const barEl = document.getElementById("dnaSpectrumBar");
+  if (barEl && Array.isArray(dna.genres) && dna.genres.length > 0) {
+    barEl.innerHTML = dna.genres.map(g => {
+      const name = g.genre || g.name || "Music";
+      const pct = g.percent ?? g.percentage ?? 0;
+      const col = g.color || "#8b5cf6";
+      const icon = genreIcons[name] || "🎵";
+      return `
+        <div class="dna-bar-segment" style="width: ${pct}%; background: ${col};" title="${escapeHtml(name)}: ${pct}% (${g.count} tracks)">
+          ${pct >= 10 ? `${icon} ${pct}%` : ''}
+        </div>
+      `;
+    }).join("");
+  } else if (barEl) {
+    barEl.innerHTML = `<div class="dna-bar-segment" style="width:100%; background:rgba(255,255,255,0.06); color:#94a3b8;">No session tracks yet. Play music to generate DNA!</div>`;
+  }
+
+  // Genre pills grid
+  const gridEl = document.getElementById("dnaGenresGrid");
+  if (gridEl && Array.isArray(dna.genres)) {
+    gridEl.innerHTML = dna.genres.map(g => {
+      const name = g.genre || g.name || "Music";
+      const pct = g.percent ?? g.percentage ?? 0;
+      const col = g.color || "#8b5cf6";
+      const icon = genreIcons[name] || "🎵";
+      return `
+        <div class="dna-genre-pill" style="border-left: 3px solid ${col};">
+          <span class="dna-genre-dot" style="background: ${col};"></span>
+          <span>${icon} <strong>${escapeHtml(name)}</strong></span>
+          <span style="color:#94a3b8; font-size:0.7rem;">${pct}% (${g.count})</span>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // Meters: Energy, Danceability, Acoustic Ratio, Profile
+  const energy = dna.avg_energy ?? dna.energy_score ?? 0;
+  const energyBar = document.getElementById("dnaEnergyBar");
+  const energyVal = document.getElementById("dnaEnergyVal");
+  if (energyBar && energyVal) {
+    energyBar.style.width = `${energy}%`;
+    energyVal.innerText = `${energy}%`;
+  }
+
+  const dance = dna.avg_danceability ?? dna.danceability_score ?? 0;
+  const danceBar = document.getElementById("dnaDanceBar");
+  const danceVal = document.getElementById("dnaDanceVal");
+  if (danceBar && danceVal) {
+    danceBar.style.width = `${dance}%`;
+    danceVal.innerText = `${dance}%`;
+  }
+
+  const acoustic = dna.avg_acoustic ?? dna.acousticness_score ?? 0;
+  const acousticBar = document.getElementById("dnaAcousticBar");
+  const acousticVal = document.getElementById("dnaAcousticVal");
+  if (acousticBar && acousticVal) {
+    acousticBar.style.width = `${acoustic}%`;
+    const elecRatio = dna.electronic_ratio !== undefined ? `${dna.electronic_ratio}% Elec` : "";
+    acousticVal.innerText = elecRatio ? `${elecRatio} / ${acoustic}% Acous` : `${acoustic}%`;
+  }
+
+  const profileEl = document.getElementById("dnaSonicProfile");
+  if (profileEl) {
+    profileEl.innerText = dna.vibe_description || dna.sonic_profile || "Dynamic Flow";
+  }
+
+  // Top artists pills
+  const artistsEl = document.getElementById("dnaTopArtists");
+  const artists = dna.artist_pills || dna.top_artists || [];
+  if (artistsEl && Array.isArray(artists)) {
+    if (artists.length === 0) {
+      artistsEl.innerHTML = `<span style="font-size:0.7rem; color:var(--text-muted);">Queue songs to build influence map</span>`;
+    } else {
+      artistsEl.innerHTML = artists.map(a => {
+        const art = a.artist || "Artist";
+        const sub = a.sub_genre ? ` • ${escapeHtml(a.sub_genre)}` : (a.count ? ` ×${a.count}` : "");
+        const col = a.color || "#c084fc";
+        return `<span class="dna-artist-pill" style="border-color:${col}40;">${escapeHtml(art)} <strong style="color:${col};">${sub}</strong></span>`;
+      }).join("");
+    }
+  }
+};
+
+// Auto-hook into brain tab switch
+document.addEventListener("DOMContentLoaded", () => {
+  const brainTabBtn = document.querySelector(`.tab-btn[onclick*="'brain'"]`);
+  if (brainTabBtn) {
+    brainTabBtn.addEventListener("click", () => {
+      setTimeout(window.refreshMusicDna, 100);
+    });
+  }
+});
+
+// Periodic DNA update when brain tab is active
+setInterval(() => {
+  const tab = document.getElementById("tabBrain");
+  if (tab && tab.classList.contains("active") && typeof window.refreshMusicDna === "function") {
+    window.refreshMusicDna();
+  }
+}, 12000);

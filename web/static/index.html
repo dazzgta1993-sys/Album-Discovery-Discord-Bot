@@ -302,6 +302,7 @@
 
         <!-- Quick Jump Navigation Menu -->
         <div class="brain-nav-menu" style="display:flex; gap:6px; overflow-x:auto; padding:4px 0 10px 0; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:12px; flex-shrink:0;">
+          <button class="btn-micro" onclick="document.getElementById('sec-dna').scrollIntoView({behavior:'smooth', block:'start'})" style="border-color:rgba(167,139,250,0.4); color:#c4b5fd;">🧬 Music DNA</button>
           <button class="btn-micro" onclick="document.getElementById('sec-matrix').scrollIntoView({behavior:'smooth', block:'start'})">🎯 Discovery Matrix</button>
           <button class="btn-micro" onclick="document.getElementById('sec-frequency').scrollIntoView({behavior:'smooth', block:'start'})">🔀 Drift & Depth</button>
           <button class="btn-micro" onclick="document.getElementById('sec-guardrails').scrollIntoView({behavior:'smooth', block:'start'})">⚡ Preload & Shield</button>
@@ -309,6 +310,65 @@
           <button class="btn-micro" onclick="document.getElementById('sec-era').scrollIntoView({behavior:'smooth', block:'start'})">⏳ Decade & Era</button>
           <button class="btn-micro" onclick="document.getElementById('sec-energy').scrollIntoView({behavior:'smooth', block:'start'})">🌊 Energy Dial</button>
           <button class="btn-micro" onclick="document.getElementById('sec-engine').scrollIntoView({behavior:'smooth', block:'start'})">🎛️ Engine Source</button>
+        </div>
+
+        <!-- Live Music DNA & Genre Spectrum Graph -->
+        <div id="sec-dna" class="brain-dna-card">
+          <div class="brain-dna-header">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.15rem;">🧬</span>
+              <div>
+                <div style="font-weight:700; font-size:0.88rem; color:#f8fafc; letter-spacing:0.3px;">Session Music DNA & Genre Spectrum</div>
+                <div style="font-size:0.7rem; color:var(--text-muted);" id="dnaSummarySubtitle">Analyzing live session sound signature & platform audio characteristics...</div>
+              </div>
+            </div>
+            <button class="btn-micro" onclick="refreshMusicDna()" title="Refresh DNA Analysis" style="background:rgba(168,85,247,0.15); border-color:rgba(168,85,247,0.3); color:#d8b4fe;">🔄 Refresh DNA</button>
+          </div>
+
+          <!-- Multi-Color DNA Spectrum Bar -->
+          <div class="dna-bar-container">
+            <div class="dna-bar" id="dnaSpectrumBar">
+              <div class="dna-bar-segment" style="width:100%; background:rgba(255,255,255,0.08); text-align:center; color:#94a3b8; font-size:0.7rem; line-height:20px;">Gathering acoustic signatures...</div>
+            </div>
+          </div>
+
+          <!-- Genre Breakdown Tags -->
+          <div class="dna-genres-grid" id="dnaGenresGrid"></div>
+
+          <!-- Audio Metrics: Energy, Danceability, Acoustic Ratio, Profile -->
+          <div class="dna-metrics-row">
+            <div class="dna-metric-box">
+              <span class="dna-metric-label">⚡ ENERGY</span>
+              <div class="dna-metric-bar-bg">
+                <div class="dna-metric-bar-fill" id="dnaEnergyBar" style="width:0%; background:linear-gradient(90deg, #f59e0b, #ef4444);"></div>
+              </div>
+              <span class="dna-metric-val" id="dnaEnergyVal">--%</span>
+            </div>
+            <div class="dna-metric-box">
+              <span class="dna-metric-label">🪩 DANCEABILITY</span>
+              <div class="dna-metric-bar-bg">
+                <div class="dna-metric-bar-fill" id="dnaDanceBar" style="width:0%; background:linear-gradient(90deg, #a855f7, #ec4899);"></div>
+              </div>
+              <span class="dna-metric-val" id="dnaDanceVal">--%</span>
+            </div>
+            <div class="dna-metric-box">
+              <span class="dna-metric-label">🎛️ ACOUSTIC RATIO</span>
+              <div class="dna-metric-bar-bg">
+                <div class="dna-metric-bar-fill" id="dnaAcousticBar" style="width:0%; background:linear-gradient(90deg, #06b6d4, #3b82f6);"></div>
+              </div>
+              <span class="dna-metric-val" id="dnaAcousticVal">--</span>
+            </div>
+            <div class="dna-metric-box">
+              <span class="dna-metric-label">🎧 VIBE PROFILE</span>
+              <span class="dna-metric-val" id="dnaSonicProfile" style="font-size:0.74rem; color:#c084fc; font-weight:600; line-height:1.2; text-align:center;">Analyzing</span>
+            </div>
+          </div>
+
+          <!-- Top Artists Fingerprint Row -->
+          <div class="dna-artists-row">
+            <span style="font-size:0.7rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap;">Top DNA Influences:</span>
+            <div id="dnaTopArtists" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
+          </div>
         </div>
 
         <!-- Live Telemetry Card -->

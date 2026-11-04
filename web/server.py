@@ -949,7 +949,9 @@ def create_web_app(bot: discord.Client) -> web.Application:
     app.router.add_post("/api/guild/{guild_id}/play", api_play)
     app.router.add_get("/api/charts", api_charts)
     app.router.add_get("/api/discography", api_discography)
+    from web.album_api import api_dna
     app.router.add_get("/api/album/tracks", api_album_tracks)
+    app.router.add_get("/api/guild/{guild_id}/dna", api_dna)
     app.router.add_get("/api/logs", api_logs)
     app.router.add_get("/api/timemachine", api_timemachine)
     app.router.add_get("/api/radio", api_radio)

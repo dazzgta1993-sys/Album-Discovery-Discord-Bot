@@ -103,3 +103,23 @@ async def api_album_tracks(request: web.Request) -> web.Response:
         "track_count": len(tracks),
         "tracks": tracks
     })
+
+async def api_dna(request: web.Request) -> web.Response:
+    bot = request.app["bot"]
+    guild_id = request.match_info.get("guild_id", "")
+    try:
+        gid = int(guild_id)
+    except (ValueError, TypeError):
+        return web.json_response({"error": "Invalid guild id"}, status=400)
+    
+    from app.services import dna_engine
+    player = bot.player_manager.players.get(gid)
+    if not player:
+        return web.json_response(dna_engine.compute_session_music_dna([]))
+    tracks = [h.to_dict() if hasattr(h, "to_dict") else h for h in player.history if getattr(h, "artist", "") != "Unknown Artist"]
+    if player.current_track:
+        tracks.append(player.current_track.to_dict() if hasattr(player.current_track, "to_dict") else player.current_track)
+        
+    dna = dna_engine.compute_session_music_dna(tracks)
+    return web.json_response(dna)
+

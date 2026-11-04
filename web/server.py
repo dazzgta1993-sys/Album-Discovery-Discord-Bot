@@ -277,7 +277,7 @@ async def api_control(request: web.Request) -> web.Response:
                 log.warning(f"Failed to join voice channel: {e}")
     elif action == "leave_voice":
         await player.disconnect()
-elif action == "seek":
+    elif action == "seek":
         try:
             pos_sec = max(0, int(float(value if value is not None else data.get("position", 0))))
             if player.is_playing and player.current_track:

@@ -549,13 +549,27 @@ async def api_search(request: web.Request) -> web.Response:
                 "duration_seconds": dur, "cover": it.get("cover") or it.get("cover_medium") or "", "source": "deezer"
             })
     elif source == "spotify":
-        for it in await asyncio.to_thread(deezer_api.search_tracks, q, limit=25):
-            dur = int(it.get("duration", 0))
-            results.append({
-                "title": it.get("title", "Unknown"), "artist": it.get("artist", "Spotify"),
-                "album": it.get("album", ""), "duration": AudioTrack._format_duration(dur),
-                "duration_seconds": dur, "cover": it.get("cover") or it.get("cover_medium") or "", "source": "spotify"
-            })
+        from app.services import spotify_service
+        spot_match = spotify_service.match_spotify_url(q)
+        if spot_match:
+            ent_type, ent_id = spot_match
+            spot_data = await asyncio.to_thread(spotify_service.fetch_spotify_entity, ent_type, ent_id)
+            if spot_data and spot_data.get("tracks"):
+                for it in spot_data["tracks"]:
+                    dur = int(it.get("duration_seconds") or 0)
+                    results.append({
+                        "title": it.get("title", "Unknown"), "artist": it.get("artist", "Unknown"),
+                        "album": it.get("album", ""), "duration": AudioTrack._format_duration(dur),
+                        "duration_seconds": dur, "cover": it.get("cover") or spot_data.get("cover") or "", "source": "spotify"
+                    })
+        else:
+            for it in await asyncio.to_thread(deezer_api.search_tracks, q, limit=25):
+                dur = int(it.get("duration", 0))
+                results.append({
+                    "title": it.get("title", "Unknown"), "artist": it.get("artist", "Unknown"),
+                    "album": it.get("album", ""), "duration": AudioTrack._format_duration(dur),
+                    "duration_seconds": dur, "cover": it.get("cover") or it.get("cover_medium") or "", "source": "deezer"
+                })
     elif source in ("musicbrainz", "mb"):
         from app.services import musicbrainz_api
         mb_items = await asyncio.to_thread(musicbrainz_api.search_release_groups, q, limit=25)
@@ -963,7 +977,7 @@ def create_web_app(bot: discord.Client) -> web.Application:
 
     return app
 
-async def start_web_server(bot: discord.Client, host: str = "0.0.0.0", port: int = 8905) -> web.AppRunner:
+async def start_web_server(bot: discord.Client, host: str = "127.0.0.1", port: int = 8905) -> web.AppRunner:
     app = create_web_app(bot)
     runner = web.AppRunner(app)
     await runner.setup()

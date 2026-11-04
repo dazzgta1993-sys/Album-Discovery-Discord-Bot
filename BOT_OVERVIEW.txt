@@ -19,8 +19,8 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
 1. 🎛️ Continuous Triple-Deck Audio Pipeline (Deck 1 Live | Deck 2 Ready | Deck 3 Cued):
    - Traditional bots suffer from 2-5 second silent buffering gaps between songs.
    - If someone skips twice quickly, traditional bots stall and crash.
-   - This bot runs a continuous 3-deck pipeline: Deck 1 streams live, Deck 2 is fully 
-     preloaded with decoded Opus audio for 0ms transitions, and Deck 3 is pre-cued 
+   - This bot runs a continuous 3-deck pipeline: Deck 1 streams live, Deck 2 is pre-warmed 
+     with pre-resolved direct audio stream URLs for instant transitions, and Deck 3 is pre-cued 
      in the chute two steps ahead with full double-skip protection.
 
 2. 🧠 Harmonic Multi-Deck AI Autoplay DJ & Vibe Anchor:
@@ -35,23 +35,19 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
    - Anti-Junk Shield: Actively filters out hoodtrap, type beats, TikTok remixes, 
      karaoke, skits (<65s), and low-listen amateur spam.
 
-3. 🎧 100% Frame-Synchronized Audio Source (AccurateAudioSource):
-   - Traditional bots use wall-clock timers (time.time()) that drift and desynchronize 
-     during pauses or network lag.
-   - This bot tracks decoded 48kHz 16-bit stereo PCM bytes directly (bytes_read / 192,000), 
-     ensuring seeker bars and dashboard telemetry match listener headphones with zero drift.
+3. 🎧 Accurate Playback & Pause-Offset Synchronization:
+   - Tracks real-time elapsed seconds with precise pause-duration accounting 
+     (time.time() - play_start_time - total_paused_time).
+   - Ensures visual seeker bars, timestamp indicators, and dashboard telemetry stay 
+     closely synchronized with Discord voice audio across pause and resume events.
 
-4. 🎙️ Live AI Radio DJ Host & Voice Segues (edge-tts Neural Voices):
-   - Traditional bots have no personality—just cold audio tracks dropping silently.
-   - This bot features an authentic broadcast radio DJ that jumps on the mic when a 
-     song ends, delivering crisp, punchy 3-5 second segues right before the next beat drops:
-     * Zero Music Interference: Only speaks between songs—never talks over active music.
-     * Studio Neural Personalities: Powered by Microsoft Edge studio voices (Classic FM 
-       Christopher, Hype Club Guy, Late Night Chill Eric, and BBC Radio 1 Ryan).
-     * Pre-generated Background Pipeline: Drops are pre-rendered into cache while Deck 2 
-       is preloading so songs transition with zero latency.
-     * Configurable Cadence: Choose between Every 3 Songs (Radio standard), Every 5 Songs, 
-       Every Song, or On-Demand with the "Drop DJ Voice Now" trigger.
+4. 🧬 Real-Time Session Music DNA & Acoustic Spectrum Visualizer:
+   - Analyzes the active session to classify tracks across 10 core musical genres and 30+ subgenres.
+   - Live Audio Metrics: Computes real-time Energy (0-100), Danceability (0-100), and 
+     Electronic-to-Acoustic sonic ratios.
+   - Multi-Color Spectrum Capsule: Proportional visual bar displaying exact session genre distribution.
+   - Top DNA Influences: Maps contributing artists with tailored subgenre badges.
+   - Thumbs Up / Down Training: Interactive feedback system persisting to SQLite taste profiles.
 
 5. 🌐 Unified 9-Platform Intelligence Ecosystem:
    - Seamlessly blends Deezer Studio Masters, YouTube Music, YouTube Live/Concerts, 

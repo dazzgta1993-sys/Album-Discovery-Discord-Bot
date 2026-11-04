@@ -369,6 +369,7 @@ class GuildPlayer:
             log.debug(f"Deck pipeline prewarm notice: {e}")
 
     def enqueue(self, track: AudioTrack, at_front: bool = False) -> int:
+        self._is_stopped = False
         self._cancel_idle_timer()
         self._prewarmed_autoplay_track = None
         self._deck3_autoplay_track = None
@@ -393,6 +394,7 @@ class GuildPlayer:
         return pos
 
     def enqueue_many(self, tracks: List[AudioTrack], at_front: bool = False) -> int:
+        self._is_stopped = False
         self._cancel_idle_timer()
         self._prewarmed_autoplay_track = None
         self._deck3_autoplay_track = None
@@ -409,7 +411,13 @@ class GuildPlayer:
         return len(self.queue)
 
     async def play_next(self):
+        if getattr(self, "_is_stopped", False):
+            self.is_playing = False
+            return
         async with self._lock:
+            if getattr(self, "_is_stopped", False):
+                self.is_playing = False
+                return
             was_skipped = getattr(self, "_was_manually_skipped", False)
             self._was_manually_skipped = False
             # Sync voice client state with discord guild
@@ -580,7 +588,7 @@ class GuildPlayer:
                     self._cancel_progress_task()
                     self._active_source = None
                     self.is_playing = False
-                    if getattr(self, "_suppress_after", False):
+                    if getattr(self, "_suppress_after", False) or getattr(self, "_is_stopped", False):
                         self._suppress_after = False
                         return
                     loop = getattr(self.bot, 'loop', None) or asyncio.get_event_loop()
@@ -646,31 +654,34 @@ class GuildPlayer:
                     except Exception:
                         pass
 
-        # Universal High-Resolution Studio Artwork Resolver
-        # Replaces low-res/letterbox YouTube thumbnails or missing covers with official 1000x1000 studio covers
+        # Universal High-Resolution Studio Artwork Resolver (Offloaded to background async worker so event loop never stalls)
         if not track.cover_url or "coverartarchive.org" in track.cover_url or "ytimg.com" in track.cover_url or not track.duration_seconds or track.duration_seconds <= 0:
             clean_art = track.artist.strip() if track.artist not in ("YouTube", "YouTube Search", "Direct Query") else ""
             query = f"{clean_art} {track.title}".strip()
             if query:
-                try:
-                    found_trk = deezer_api.search_tracks(query, limit=1)
-                    if found_trk:
-                        dz_t = found_trk[0]
-                        dz_art = (dz_t.get("artist") or "").lower()
-                        dz_title = (dz_t.get("title") or "").lower()
-                        t_art = clean_art.lower()
-                        t_title = track.title.lower()
-                        if (not t_art or t_art in dz_art or dz_art in t_art) and (t_title in dz_title or dz_title in t_title):
-                            dz_cover = dz_t.get("cover_xl") or dz_t.get("cover_big") or dz_t.get("cover_medium") or dz_t.get("cover")
-                            if dz_cover and (not track.cover_url or "coverartarchive.org" in track.cover_url or "ytimg.com" in track.cover_url):
-                                track.cover_url = dz_cover
-                            if not track.album and dz_t.get("album"):
-                                track.album = dz_t.get("album")
-                            if (not track.duration_seconds or track.duration_seconds <= 0) and dz_t.get("duration"):
-                                track.duration_seconds = int(dz_t["duration"])
-                                track.duration_str = AudioTrack._format_duration(track.duration_seconds)
-                except Exception:
-                    pass
+                asyncio.create_task(self._fetch_studio_artwork_async(track, query, clean_art))
+
+    async def _fetch_studio_artwork_async(self, track: AudioTrack, query: str, clean_art: str):
+        try:
+            found_trk = await asyncio.to_thread(deezer_api.search_tracks, query, limit=1)
+            if found_trk:
+                dz_t = found_trk[0]
+                dz_art = (dz_t.get("artist") or "").lower()
+                dz_title = (dz_t.get("title") or "").lower()
+                t_art = clean_art.lower()
+                t_title = track.title.lower()
+                if (not t_art or t_art in dz_art or dz_art in t_art) and (t_title in dz_title or dz_title in t_title):
+                    dz_cover = dz_t.get("cover_xl") or dz_t.get("cover_big") or dz_t.get("cover_medium") or dz_t.get("cover")
+                    if dz_cover and (not track.cover_url or "coverartarchive.org" in track.cover_url or "ytimg.com" in track.cover_url):
+                        track.cover_url = dz_cover
+                    if not track.album and dz_t.get("album"):
+                        track.album = dz_t.get("album")
+                    if (not track.duration_seconds or track.duration_seconds <= 0) and dz_t.get("duration"):
+                        track.duration_seconds = int(dz_t["duration"])
+                        track.duration_str = AudioTrack._format_duration(track.duration_seconds)
+                    await self.update_player_message()
+        except Exception:
+            pass
 
     def _build_now_playing_embed(self, track: AudioTrack) -> discord.Embed:
         embed = discord.Embed(
@@ -794,6 +805,7 @@ class GuildPlayer:
         if now - getattr(self, "_last_skip_time", 0.0) < 0.6:
             return False
         self._last_skip_time = now
+        self._is_stopped = False
         self._cancel_progress_task()
         self._was_manually_skipped = True
         if self.voice_client and (self.voice_client.is_playing() or self.voice_client.is_paused()):
@@ -810,6 +822,9 @@ class GuildPlayer:
         return False
 
     def stop(self):
+        self._is_stopped = True
+        self._suppress_after = True
+        self.is_playing = False
         self._cancel_progress_task()
         self._active_source = None
         self.play_start_time = 0.0
@@ -817,8 +832,13 @@ class GuildPlayer:
         self.total_paused_time = 0.0
         self.queue.clear()
         self.current_track = None
-        if self.voice_client and self.voice_client.is_playing():
-            self.voice_client.stop()
+        self._prewarmed_autoplay_track = None
+        self._deck3_autoplay_track = None
+        if self.voice_client and (self.voice_client.is_playing() or self.voice_client.is_paused()):
+            try:
+                self.voice_client.stop()
+            except Exception:
+                pass
         self._start_idle_timer()
 
     def set_volume(self, vol: float):

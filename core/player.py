@@ -52,34 +52,14 @@ class AudioTrack:
     def to_dict(self) -> dict:
         return {"title": self.title, "artist": self.artist, "album": self.album, "duration": self.duration_str, "cover": self.cover_url, "requested_by": self.requested_by, "is_autoplay": getattr(self, "is_autoplay", False), "source": getattr(self, "source", "deezer")}
 
-def mix_pcm_frames(music_bytes: bytes, dj_bytes: bytes, music_vol: float = 0.15, dj_vol: float = 1.3) -> bytes:
-    """Mixes 48kHz 16-bit stereo PCM frames with broadcast audio ducking."""
-    try:
-        import audioop
-        ducked = audioop.mul(music_bytes, 2, music_vol)
-        if dj_vol != 1.0:
-            dj_bytes = audioop.mul(dj_bytes, 2, dj_vol)
-        if len(dj_bytes) < len(ducked):
-            dj_bytes = dj_bytes + b'\x00' * (len(ducked) - len(dj_bytes))
-        elif len(dj_bytes) > len(ducked):
-            dj_bytes = dj_bytes[:len(ducked)]
-        return audioop.add(ducked, dj_bytes, 2)
-    except Exception:
-        return music_bytes
-
 class AccurateAudioSource(discord.PCMVolumeTransformer):
     """
-    Precision audio stream wrapper that measures decoded 48kHz 16-bit stereo PCM frames
-    and supports dynamic real-time broadcast radio DJ voice ducking overlays.
+    Precision audio stream wrapper that measures decoded 48kHz 16-bit stereo PCM frames.
     """
     def __init__(self, original, volume: float = 1.0):
         super().__init__(original, volume=volume)
         self.bytes_read: int = 0
         self.first_read_time: float = 0.0
-        self.dj_overlay = None
-
-    def set_dj_overlay(self, pcm_source):
-        self.dj_overlay = pcm_source
 
     def read(self) -> bytes:
         ret = super().read()
@@ -88,21 +68,8 @@ class AccurateAudioSource(discord.PCMVolumeTransformer):
         if self.first_read_time == 0.0:
             self.first_read_time = time.time()
         self.bytes_read += len(ret)
-        if self.dj_overlay:
-            try:
-                dj_bytes = self.dj_overlay.read()
-                if dj_bytes:
-                    self._empty_dj_reads = 0
-                    ret = mix_pcm_frames(ret, dj_bytes, music_vol=0.15, dj_vol=1.3)
-                else:
-                    self._empty_dj_reads = getattr(self, "_empty_dj_reads", 0) + 1
-                    if self._empty_dj_reads > 15:
-                        self.dj_overlay = None
-            except Exception:
-                self.dj_overlay = None
         return ret
 
-    @property
     def elapsed_seconds(self) -> float:
         if self.bytes_read == 0:
             return 0.0
@@ -146,16 +113,7 @@ class GuildPlayer:
         self.hit_depth: str = "balanced"  # "top_hits", "balanced", "deep_cuts"
         self.deck2_enabled: bool = True   # Deck 2 standby zero-gap preloader
         self.deck3_enabled: bool = True   # Deck 3 pipeline preloader
-        self.dj_talkover_enabled: bool = True   # AI Radio DJ Talk-Over Segue
-        self.dj_talkover_frequency: int = 3     # Every 3 songs
-        self.dj_voice_style: str = "classic_fm" # "classic_fm", "hype_club", "late_night", "bbc_radio"
-        self.songs_since_dj_drop: int = 99
-        self.pregenerated_dj_drop: Optional[str] = None
-        self.last_dj_drop_id: str = ""
-        self.last_dj_drop_time: float = 0.0
         self._was_manually_skipped: bool = False
-        self._is_playing_dj_drop: bool = False
-        self._abort_dj_drop: bool = False
         self.explicit_filter: str = "allow" # "allow", "clean_only"
         self.artist_cooldown: int = 10     # Authentic radio: 10 songs before an artist can repeat
         self.era_filter: str = "all"       # "all", "2020s", "2010s", "2000s", "classics"
@@ -179,9 +137,6 @@ class GuildPlayer:
                 if "hit_depth" in saved: self.hit_depth = str(saved["hit_depth"])
                 if "deck2_enabled" in saved: self.deck2_enabled = bool(saved["deck2_enabled"])
                 if "deck3_enabled" in saved: self.deck3_enabled = bool(saved["deck3_enabled"])
-                if "dj_talkover_enabled" in saved: self.dj_talkover_enabled = bool(saved["dj_talkover_enabled"])
-                if "dj_talkover_frequency" in saved: self.dj_talkover_frequency = int(saved["dj_talkover_frequency"])
-                if "dj_voice_style" in saved: self.dj_voice_style = str(saved["dj_voice_style"])
                 if "explicit_filter" in saved: self.explicit_filter = str(saved["explicit_filter"])
                 if "artist_cooldown" in saved: self.artist_cooldown = int(saved["artist_cooldown"])
                 if "era_filter" in saved: self.era_filter = str(saved["era_filter"])
@@ -385,26 +340,7 @@ class GuildPlayer:
                     if ready2:
                         log.info(f"[{self.guild.name}] Deck 2 Ready: {t2.artist} - {t2.title}")
 
-            # AI Radio DJ Segue Pre-generation
-            if (
-                self.dj_talkover_enabled
-                and self.dj_talkover_frequency > 0
-                and not self.pregenerated_dj_drop
-            ):
-                t2_target = self.deck2_track
-                if t2_target and (self.songs_since_dj_drop + 1) >= self.dj_talkover_frequency:
-                    try:
-                        from app.services import dj_host
-                        prev_art = self.current_track.artist if self.current_track else None
-                        self.pregenerated_dj_drop = await dj_host.generate_dj_drop(
-                            str(self.guild.id), t2_target.artist, t2_target.title, prev_art, self.dj_voice_style
-                        )
-                        if self.pregenerated_dj_drop:
-                            log.info(f"[{self.guild.name}] 🎙️ DJ Segue pre-generated for next up: {t2_target.artist} - {t2_target.title}")
-                    except Exception as e:
-                        log.debug(f"DJ drop prewarm notice: {e}")
-
-            # 2. Deck 3 Target (Two Steps Ahead, seeded by Deck 2 for harmonic progression)
+# 2. Deck 3 Target (Two Steps Ahead, seeded by Deck 2 for harmonic progression)
             if self.deck3_enabled:
                 t3 = None
                 if len(self.queue) > 1:
@@ -632,28 +568,7 @@ class GuildPlayer:
                     options=ffmpeg_opts
                 )
                 transformed_source = AccurateAudioSource(audio_source, volume=self.volume)
-
-                # Broadcast AI DJ Intro Overlay: Ducks music volume over song intro (Zero latency!)
-                if (
-                    not was_skipped
-                    and self.dj_talkover_enabled
-                    and self.pregenerated_dj_drop
-                    and os.path.exists(self.pregenerated_dj_drop)
-                    and (self.songs_since_dj_drop + 1) >= self.dj_talkover_frequency
-                ):
-                    try:
-                        self.last_dj_drop_id = str(int(time.time() * 1000))
-                        self.last_dj_drop_time = time.time()
-                        dj_pcm = discord.FFmpegPCMAudio(self.pregenerated_dj_drop, options="-ar 48000 -ac 2")
-                        transformed_source.set_dj_overlay(dj_pcm)
-                        self.pregenerated_dj_drop = None
-                        self.songs_since_dj_drop = 0
-                        log.info(f"[{self.guild.name}] 🎙️ AI Radio DJ Voice Segue active over song intro!")
-                    except Exception as e:
-                        log.warning(f"Error attaching DJ intro overlay: {e}")
-                else:
-                    self.songs_since_dj_drop += 1
-                self._active_source = transformed_source
+self._active_source = transformed_source
                 self._cancel_progress_task()
                 self.play_start_time = time.time()
                 self.total_paused_time = 0.0
@@ -866,44 +781,12 @@ class GuildPlayer:
     def skip(self) -> bool:
         self._cancel_progress_task()
         self._was_manually_skipped = True
-        self._abort_dj_drop = True
         if self.voice_client and (self.voice_client.is_playing() or self.voice_client.is_paused()):
             self.voice_client.stop()
             return True
         elif not self.is_playing:
             asyncio.create_task(self.play_next())
             return True
-        return False
-
-    async def trigger_live_dj_drop(self) -> bool:
-        """Instantly drops the AI Radio DJ voice over active playback (Discord Voice and Browser Monitor)!"""
-        target = self.current_track or self.deck2_track
-        if not target:
-            return False
-        try:
-            from app.services import dj_host
-            prev_art = self.history[-2].artist if len(self.history) >= 2 else None
-            drop_path = await dj_host.generate_dj_drop(
-                str(self.guild.id), target.artist, target.title, prev_art, self.dj_voice_style
-            )
-            if drop_path and os.path.exists(drop_path):
-                self.last_dj_drop_id = str(int(time.time() * 1000))
-                self.last_dj_drop_time = time.time()
-                if self.voice_client and self.voice_client.is_connected():
-                    try:
-                        dj_pcm = discord.FFmpegPCMAudio(drop_path, options="-ar 48000 -ac 2")
-                        if self._active_source and hasattr(self._active_source, "set_dj_overlay"):
-                            self._active_source.set_dj_overlay(dj_pcm)
-                            log.info(f"[{self.guild.name}] 🎙️ Live AI Radio DJ Voice dropped over active music!")
-                        elif not self.voice_client.is_playing() and not self.voice_client.is_paused():
-                            self.voice_client.play(AccurateAudioSource(dj_pcm, volume=self.volume))
-                            log.info(f"[{self.guild.name}] 🎙️ Live AI Radio DJ Voice played in idle voice channel.")
-                    except Exception as err:
-                        log.warning(f"Discord voice DJ overlay notice: {err}")
-                log.info(f"[{self.guild.name}] 🎙️ Live AI Radio DJ Voice drop ready for broadcast!")
-                return True
-        except Exception as e:
-            log.warning(f"Failed live DJ drop trigger: {e}")
         return False
 
     def stop(self):

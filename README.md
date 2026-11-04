@@ -2,28 +2,12 @@
 
 A broadcast-grade, standalone Discord music bot and real-time studio control center powered by the **Album Discovery** engine:
 
-- 🎙️ **Live AI Radio DJ Host:** Neural broadcast voice segues with automatic studio audio ducking over song intros across Discord Voice & Web Browser!
 - 🎛️ **Triple-Deck Pipeline Preloader:** Zero-gap transitions (<50ms) with Deck 2 Standby Prewarming and Deck 3 harmonic 2-step lookahead.
 - 🧠 **Autonomous Vibe Discovery Matrix:** Self-driving intelligent autoplay with 4 exploration modes, anchor locking, artist cooldown shields, and era filters.
 - 🌐 **Web Control Hub (`localhost:8905`):** Real-time browser studio with live animated seeker, live browser audio monitoring, queue reordering, and auto-streaming server logs.
 - 📻 **Multi-Source Streaming & Charts:** High-fidelity Opus 48kHz audio from Deezer, YouTube Music, Apple Music, SoundCloud, Official UK Top 40, and Billboard US.
 - ⏳ **Time Machine (1960–2026):** Explore and queue landmark historical releases across 67 consecutive musical eras.
 - 💿 **Complete Discography Classifier:** Browse studio albums, EPs, singles, mixtapes, collabs, and live releases with 1-click album queuing.
-
----
-
-## 🎙️ Live AI Radio DJ Host
-
-Experience authentic radio broadcast talk-over transitions between tracks:
-- **Zero-Latency Audio Ducking:** The bot smoothly ducks active music volume down to **15%** while the DJ speaks, restoring it to **100%** when the voiceover concludes.
-- **Dual-Channel Broadcast:** DJ drops play seamlessly in **Discord Voice Channels AND the Web Browser Monitor** simultaneously.
-- **4 Neural Studio Personalities:**
-  - 🎙️ **Classic FM:** Warm, energetic broadcast host (US Neural Christopher).
-  - 🔥 **Hype Club:** High-energy festival & club DJ host (US Neural Guy).
-  - 🌙 **Late Night:** Smooth, laid-back midnight broadcast (US Neural Eric).
-  - 📻 **BBC Radio 1:** Crisp, iconic British host (UK Neural Ryan).
-- **Custom Cadence:** Set the DJ to speak `Every Song`, `Every 3 Songs`, `Every 5 Songs`, or trigger on demand with `🎙️ Drop DJ Voice Now`.
-- **Failsafe Redundancy:** Automatic dual-engine fallback (`edge-tts` ➔ `gTTS`) resampled to 48,000Hz stereo studio audio with broadcast loudness normalization.
 
 ---
 

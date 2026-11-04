@@ -127,7 +127,6 @@
         <button class="toggle-btn active" id="btnAudioMonitor" style="flex:1; padding:7px 10px; font-weight:700; font-size:0.75rem; background:rgba(157,78,221,0.08); border-color:rgba(157,78,221,0.25);" onclick="toggleAudioMonitor()">🎧 Listen Live in Browser: ON</button>
       </div>
       <audio id="browserMonitorAudio" preload="none"></audio>
-      <audio id="browserDjAudio" preload="none"></audio>
 
       <!-- Volume Row -->
       <div class="volume-row">
@@ -295,7 +294,6 @@
           <button class="btn-micro" onclick="document.getElementById('sec-guardrails').scrollIntoView({behavior:'smooth', block:'start'})">⚡ Preload & Shield</button>
           <button class="btn-micro" onclick="document.getElementById('sec-cooldown').scrollIntoView({behavior:'smooth', block:'start'})">📻 Radio Anti-Repeat</button>
           <button class="btn-micro" onclick="document.getElementById('sec-era').scrollIntoView({behavior:'smooth', block:'start'})">⏳ Decade & Era</button>
-          <button class="btn-micro" onclick="document.getElementById('sec-djhost').scrollIntoView({behavior:'smooth', block:'start'})">🎙️ AI DJ Host</button>
           <button class="btn-micro" onclick="document.getElementById('sec-energy').scrollIntoView({behavior:'smooth', block:'start'})">🌊 Energy Dial</button>
           <button class="btn-micro" onclick="document.getElementById('sec-engine').scrollIntoView({behavior:'smooth', block:'start'})">🎛️ Engine Source</button>
         </div>
@@ -449,42 +447,6 @@
               <button class="pill-btn active" id="energy-auto" onclick="selectVibeEnergy('auto')">🌊 Natural Flow (Matched)</button>
               <button class="pill-btn" id="energy-high" onclick="selectVibeEnergy('high')">⚡ High Energy (Upbeat & Party)</button>
               <button class="pill-btn" id="energy-chill" onclick="selectVibeEnergy('chill')">🌙 Chill & Mellow (Late Night)</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- AI Radio DJ Host Section -->
-        <div class="brain-sliders-grid" style="margin-top:12px;">
-          <div class="brain-control-box" style="grid-column: 1 / -1;">
-            <div class="control-box-header">
-              <span id="sec-djhost">🎙️ Live AI Radio DJ Host (End-of-Track Voice Segue)</span>
-              <div style="display:flex; gap:8px;">
-                <button class="btn-small" id="btnDjTrigger" onclick="triggerDjDropNow()" style="background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4);">🎙️ Drop DJ Voice Now</button>
-                <button class="btn-small" id="btnDjToggle" onclick="toggleDjTalkover()" style="color:#4ade80;">🎙️ DJ Host: ON</button>
-              </div>
-            </div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">
-              Plays a punchy 3–5s broadcast radio intro when the song ends before the next beat drops (zero interference with music).
-            </div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:0.75rem; color:var(--text-muted); width:95px; flex-shrink:0;">Cadence:</span>
-                <div class="filter-pills-row" style="margin-top:0;">
-                  <button class="pill-btn active" id="djfreq-3" onclick="selectDjFreq(3)">📻 Every 3 Songs (Radio)</button>
-                  <button class="pill-btn" id="djfreq-5" onclick="selectDjFreq(5)">⚡ Every 5 Songs</button>
-                  <button class="pill-btn" id="djfreq-1" onclick="selectDjFreq(1)">🔥 Every Song</button>
-                  <button class="pill-btn" id="djfreq-0" onclick="selectDjFreq(0)">🚫 Off</button>
-                </div>
-              </div>
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="font-size:0.75rem; color:var(--text-muted); width:95px; flex-shrink:0;">DJ Persona:</span>
-                <div class="filter-pills-row" style="margin-top:0;">
-                  <button class="pill-btn active" id="djvoice-classic_fm" onclick="selectDjVoice('classic_fm')">📻 Classic FM (Christopher)</button>
-                  <button class="pill-btn" id="djvoice-hype_club" onclick="selectDjVoice('hype_club')">⚡ Hype Club (Guy)</button>
-                  <button class="pill-btn" id="djvoice-late_night" onclick="selectDjVoice('late_night')">🌙 Late Night Chill (Eric)</button>
-                  <button class="pill-btn" id="djvoice-bbc_radio" onclick="selectDjVoice('bbc_radio')">🇬🇧 BBC Radio 1 (Ryan)</button>
-                </div>
-              </div>
             </div>
           </div>
         </div>

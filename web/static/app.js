@@ -11,7 +11,6 @@ let currentQuality = "auto";
 let preMuteVolume = 100;
 let isMonitoring = localStorage.getItem("albumDiscoveryAudioMonitor") !== "false";
 let lastMonitoredTrack = "";
-window._lastHandledDjDropId = "";
 window._lastDeck2Track = null;
 window._isSkipping = false;
 window._skippedTrackTitle = "";
@@ -314,14 +313,6 @@ async function pollGuildState(guildId) {
       if (b.vibe_energy) { currentBrainConfig.vibe_energy = b.vibe_energy; setPillActive("energy", b.vibe_energy); }
       if (b.vibe_engine_source) { currentBrainConfig.vibe_engine_source = b.vibe_engine_source; setPillActive("engine", b.vibe_engine_source); }
     }
-    if (p.last_dj_drop_id && p.last_dj_drop_id !== window._lastHandledDjDropId) {
-      window._lastHandledDjDropId = p.last_dj_drop_id;
-      if (p.last_dj_drop_time && (Date.now() / 1000 - p.last_dj_drop_time) < 8) {
-        if (isMonitoring && typeof window.playBrowserDjDrop === "function") {
-          window.playBrowserDjDrop("/api/guild/" + currentGuildId + "/dj_drop?t=" + p.last_dj_drop_id);
-        }
-      }
-    }
     if (isMonitoring) {
       const currentTitle = p.current_track ? p.current_track.title : "";
       const audio = document.getElementById("browserMonitorAudio");
@@ -530,30 +521,6 @@ function armAutoplayUnlocker() {
   window.addEventListener("pointerdown", unlock, { once: true });
 }
 
-window.playBrowserDjDrop = function(url) {
-  const monAudio = document.getElementById("browserMonitorAudio");
-  const djAudio = document.getElementById("browserDjAudio");
-  if (!djAudio) return;
-  const volSlider = document.getElementById("volSlider");
-  const baseVol = volSlider ? Math.max(0, Math.min(1, (parseInt(volSlider.value) || 100) / 100)) : 1.0;
-  if (monAudio && isMonitoring && !monAudio.paused) {
-    monAudio.volume = Math.max(0, baseVol * 0.12);
-  }
-  djAudio.volume = Math.min(1.0, baseVol * 1.5);
-  djAudio.src = url || ("/api/guild/" + currentGuildId + "/dj_drop?t=" + Date.now());
-  const restoreMusic = () => {
-    if (monAudio && isMonitoring) {
-      monAudio.volume = baseVol;
-    }
-  };
-  djAudio.onended = restoreMusic;
-  djAudio.onerror = restoreMusic;
-  djAudio.play().catch(e => {
-    console.warn("DJ audio play notice:", e);
-    restoreMusic();
-  });
-};
-
 function toggleAudioMonitor() {
   const audio = document.getElementById("browserMonitorAudio");
   const btn = document.getElementById("btnAudioMonitor");
@@ -660,13 +627,7 @@ function onVolumeInput(val) {
   const num = parseInt(val) || 0;
   document.getElementById("volPct").innerText = num + "%";
   const monAudio = document.getElementById("browserMonitorAudio");
-  const djAudio = document.getElementById("browserDjAudio");
-  const fVol = Math.max(0, Math.min(1, num / 100));
-  if (monAudio && isMonitoring) {
-    if (!djAudio || djAudio.paused) monAudio.volume = fVol;
-    else monAudio.volume = fVol * 0.20;
-  }
-  if (djAudio && !djAudio.paused) djAudio.volume = Math.min(1.0, fVol * 1.25);
+  if (monAudio && isMonitoring) monAudio.volume = Math.max(0, Math.min(1, num / 100));
   if (volDebounce) clearTimeout(volDebounce);
   volDebounce = setTimeout(() => { sendControl("set_volume", num); }, 120);
 }

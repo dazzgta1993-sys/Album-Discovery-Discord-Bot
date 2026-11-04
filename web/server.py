@@ -159,8 +159,6 @@ async def api_guild_state(request: web.Request) -> web.Response:
             "loop_mode": player.loop_mode,
             "autoplay": player.autoplay,
             "audio_quality": player.audio_quality,
-            "last_dj_drop_id": getattr(player, "last_dj_drop_id", ""),
-            "last_dj_drop_time": getattr(player, "last_dj_drop_time", 0.0),
             "progress": {
                 "elapsed": elapsed,
                 "total": total,
@@ -180,9 +178,6 @@ async def api_guild_state(request: web.Request) -> web.Response:
                 "hit_depth": getattr(player, "hit_depth", "balanced"),
                 "deck2_enabled": getattr(player, "deck2_enabled", True),
                 "deck3_enabled": getattr(player, "deck3_enabled", True),
-                "dj_talkover_enabled": getattr(player, "dj_talkover_enabled", True),
-                "dj_talkover_frequency": getattr(player, "dj_talkover_frequency", 3),
-                "dj_voice_style": getattr(player, "dj_voice_style", "classic_fm"),
                 "explicit_filter": getattr(player, "explicit_filter", "allow"),
                 "artist_cooldown": getattr(player, "artist_cooldown", 10),
                 "era_filter": getattr(player, "era_filter", "all"),
@@ -282,15 +277,7 @@ async def api_control(request: web.Request) -> web.Response:
                 log.warning(f"Failed to join voice channel: {e}")
     elif action == "leave_voice":
         await player.disconnect()
-    elif action == "trigger_dj_drop":
-        res_drop = await player.trigger_live_dj_drop()
-        drop_url = f"/api/guild/{guild.id}/dj_drop?t={int(time.time()*1000)}" if res_drop else None
-        return web.json_response({
-            "status": "ok" if res_drop else "error",
-            "action": "trigger_dj_drop",
-            "dj_drop_url": drop_url
-        })
-    elif action == "seek":
+elif action == "seek":
         try:
             pos_sec = max(0, int(float(value if value is not None else data.get("position", 0))))
             if player.is_playing and player.current_track:
@@ -315,13 +302,6 @@ async def api_control(request: web.Request) -> web.Response:
             player.deck2_enabled = bool(data["deck2_enabled"])
         if "deck3_enabled" in data:
             player.deck3_enabled = bool(data["deck3_enabled"])
-        if "dj_talkover_enabled" in data:
-            player.dj_talkover_enabled = bool(data["dj_talkover_enabled"])
-        if "dj_talkover_frequency" in data:
-            try: player.dj_talkover_frequency = int(data["dj_talkover_frequency"])
-            except: pass
-        if "dj_voice_style" in data:
-            player.dj_voice_style = str(data["dj_voice_style"])
         if "explicit_filter" in data and data["explicit_filter"] in ("allow", "clean_only"):
             player.explicit_filter = data["explicit_filter"]
         if "artist_cooldown" in data:
@@ -343,9 +323,6 @@ async def api_control(request: web.Request) -> web.Response:
                 "hit_depth": player.hit_depth,
                 "deck2_enabled": player.deck2_enabled,
                 "deck3_enabled": getattr(player, "deck3_enabled", True),
-                "dj_talkover_enabled": getattr(player, "dj_talkover_enabled", True),
-                "dj_talkover_frequency": getattr(player, "dj_talkover_frequency", 3),
-                "dj_voice_style": getattr(player, "dj_voice_style", "classic_fm"),
                 "explicit_filter": player.explicit_filter,
                 "artist_cooldown": getattr(player, "artist_cooldown", 10),
                 "era_filter": getattr(player, "era_filter", "all"),
@@ -362,9 +339,6 @@ async def api_control(request: web.Request) -> web.Response:
                 "hit_depth": player.hit_depth,
                 "deck2_enabled": player.deck2_enabled,
                 "deck3_enabled": getattr(player, "deck3_enabled", True),
-                "dj_talkover_enabled": getattr(player, "dj_talkover_enabled", True),
-                "dj_talkover_frequency": getattr(player, "dj_talkover_frequency", 3),
-                "dj_voice_style": getattr(player, "dj_voice_style", "classic_fm"),
                 "explicit_filter": player.explicit_filter
             }
         })
@@ -732,18 +706,6 @@ async def api_charts(request: web.Request) -> web.Response:
         log.warning(f"Error fetching charts for Web Hub: {e}")
         return web.json_response({"charts": [], "title": "Trending Charts", "badge": "🔥 CHARTS", "country": "gb"})
 
-async def api_dj_drop(request: web.Request) -> web.Response:
-    guild_id = request.match_info.get("guild_id", "")
-    from app.services.dj_host import CACHE_DIR
-    drop_file = os.path.join(CACHE_DIR, f"{guild_id}_drop.mp3")
-    if os.path.exists(drop_file):
-        resp = web.FileResponse(drop_file)
-        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        resp.headers["Pragma"] = "no-cache"
-        resp.headers["Content-Type"] = "audio/mpeg"
-        return resp
-    return web.Response(status=404, text="No DJ drop available")
-
 async def api_stream(request: web.Request) -> web.StreamResponse:
     bot: discord.Client = request.app["bot"]
     guild_id = request.match_info.get("guild_id", "")
@@ -919,7 +881,6 @@ def create_web_app(bot: discord.Client) -> web.Application:
     app.router.add_get("/api/timemachine", api_timemachine)
     app.router.add_get("/api/radio", api_radio)
     app.router.add_get("/api/guild/{guild_id}/stream", api_stream)
-    app.router.add_get("/api/guild/{guild_id}/dj_drop", api_dj_drop)
 
     if os.path.exists(STATIC_DIR):
         app.router.add_static("/static/", STATIC_DIR)

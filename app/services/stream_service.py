@@ -859,36 +859,27 @@ def get_stream_info(video_id: str, quality: str = "auto", force_fresh: bool = Fa
             "noplaylist": True,
             "compat_opts": ["no-plugins"],
             "check_formats": False,
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["ios", "android", "mweb"]
-                }
-            }
         }
 
         cookie_file_candidates = [
             os.path.join(_ROOT_DIR, "cookies.txt"),
             os.path.join(_ROOT_DIR, "data", "cookies.txt"),
+            os.path.join(_ROOT_DIR, "cookies_backup.txt"),
         ]
         cookie_file = next((f for f in cookie_file_candidates if os.path.isfile(f)), None)
 
-        if cookie_file:
-            ydl_opts["cookiefile"] = cookie_file
-        elif cookies_browser:
-            ydl_opts["cookiesfrombrowser"] = (cookies_browser, None, None, None)
-
+        # Primary: Clean direct extraction for 100% FFmpeg stream compatibility
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(f"https://www.youtube.com/watch?v={vid}" if is_yt_id else vid, download=False)
         except Exception:
-            # Fallback without browser cookies if browser profile is locked
-            if "cookiefile" in ydl_opts or "cookiesfrombrowser" in ydl_opts:
-                ydl_opts.pop("cookiesfrombrowser", None)
-                ydl_opts.pop("cookiefile", None)
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(f"https://www.youtube.com/watch?v={vid}" if is_yt_id else vid, download=False)
-            else:
-                raise
+            # Fallback: Use authenticated cookies if video is age-gated or bot-challenged
+            if cookie_file:
+                ydl_opts["cookiefile"] = cookie_file
+            elif cookies_browser:
+                ydl_opts["cookiesfrombrowser"] = (cookies_browser, None, None, None)
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(f"https://www.youtube.com/watch?v={vid}" if is_yt_id else vid, download=False)
 
         url = info.get("url")
         hdrs = info.get("http_headers") or {

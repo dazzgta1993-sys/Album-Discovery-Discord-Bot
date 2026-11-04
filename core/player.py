@@ -40,6 +40,7 @@ class AudioTrack:
         self.requested_by = requested_by
         self.source = source
         self.is_autoplay = is_autoplay
+        self.stream_headers = {}
 
     @staticmethod
     def _format_duration(secs: int) -> str:
@@ -544,6 +545,7 @@ class GuildPlayer:
                         s_url, hdrs = await asyncio.to_thread(stream_service.get_stream_info, next_track.video_id, self.audio_quality)
                         stream_url = s_url
                         next_track.stream_url = s_url
+                        next_track.stream_headers = hdrs or {}
                         self._enrich_track_metadata(next_track)
                 except Exception as e:
                     log.error(f"Error resolving stream for {next_track.artist} - {next_track.title}: {e}")
@@ -571,8 +573,12 @@ class GuildPlayer:
                 self._consecutive_resolve_failures = 0
 
             try:
-                ua_header = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
-                ffmpeg_before_opts = f'-headers "{ua_header}" -reconnect 1 -reconnect_streamed 1 -reconnect_on_network_error 1 -reconnect_delay_max 5 -probesize 65536 -analyzeduration 100000 -nostdin'
+                headers_dict = getattr(next_track, "stream_headers", None) or {}
+                if headers_dict:
+                    hdr_lines = "".join(f"{k}: {v}\r\n" for k, v in headers_dict.items() if k.lower() in ("user-agent", "accept", "accept-language"))
+                else:
+                    hdr_lines = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
+                ffmpeg_before_opts = f'-headers "{hdr_lines}" -reconnect 1 -reconnect_streamed 1 -reconnect_on_network_error 1 -reconnect_delay_max 5 -probesize 65536 -analyzeduration 100000 -nostdin'
                 bitrate_flag = {"128k": " -b:a 128k", "192k": " -b:a 192k", "320k": " -b:a 320k"}.get(self.audio_quality, "")
                 ffmpeg_opts = f"-vn -af afade=t=in:ss=0:d=0.03,volume=0.95{bitrate_flag}"
                 

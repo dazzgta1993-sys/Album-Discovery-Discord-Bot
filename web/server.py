@@ -703,6 +703,16 @@ async def api_play(request: web.Request) -> web.Response:
                 asyncio.create_task(player.play_next())
             return web.json_response({"status": "ok", "enqueued_count": len(album_tracks), "total": total, "position": total})
 
+    query = data.get("query")
+    if query and not data.get("title"):
+        found = await asyncio.to_thread(deezer_api.search_tracks, query, limit=1)
+        if found:
+            data["title"] = found[0].get("title", query)
+            data["artist"] = found[0].get("artist", "Unknown Artist")
+            data["album"] = found[0].get("album", "")
+            data["cover"] = found[0].get("cover_xl") or found[0].get("cover") or ""
+            data["duration_seconds"] = int(found[0].get("duration", 0))
+
     track = AudioTrack(
         title=data.get("title", "Unknown Title"),
         artist=data.get("artist", "Unknown Artist"),

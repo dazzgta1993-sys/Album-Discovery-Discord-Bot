@@ -1,7 +1,8 @@
 # Environment & Secrets
 .env
+.env.local
 .env.*
-*.env
+!.env.example
 
 # Python Cache & Virtual Environments
 __pycache__/

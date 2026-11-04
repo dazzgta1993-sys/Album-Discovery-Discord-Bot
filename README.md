@@ -23,6 +23,16 @@ The bot embeds a modern, real-time web dashboard running directly inside the bot
 
 ---
 
+## 📋 Prerequisites
+Before running the bot, ensure you have:
+1. **Python 3.10+** — [python.org](https://www.python.org/downloads/) *(Make sure to check "Add Python to PATH")*
+2. **FFmpeg** (Required for Discord audio streaming) — Install in 1 command:
+   ```powershell
+   winget install Gyan.FFmpeg
+   ```
+
+---
+
 ## 🚀 Quick Setup (3 Steps)
 
 ### Step 1: Create Your Discord Bot

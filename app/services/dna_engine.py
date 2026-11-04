@@ -1,9 +1,12 @@
 """Music DNA Engine - Computes real-time genre spectrum, sonic traits,
-energy levels, and acoustic DNA from session playback history.
+energy levels, and acoustic DNA from session playback history using
+dynamic canonical taxonomy resolution and intelligent sonic profiling.
 """
 import unicodedata
+import urllib.parse
 from collections import Counter
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
+from ..utils.http_client import fetch_json
 
 # Primary genre color palette
 GENRE_COLORS = {
@@ -18,7 +21,53 @@ GENRE_COLORS = {
     "Other": "#94a3b8"
 }
 
-# Normalize string helper
+# Standard canonical genre classification to primary category & sonic traits
+# (Primary Category, Energy 0-100, Danceability 0-100, Acousticness 0-100)
+CANONICAL_GENRE_TAXONOMY: Dict[str, Tuple[str, int, int, int]] = {
+    "electronic": ("Dance & Electronic", 88, 90, 12),
+    "dance": ("Dance & Electronic", 90, 92, 10),
+    "house": ("Dance & Electronic", 88, 92, 10),
+    "deep house": ("Dance & Electronic", 86, 92, 12),
+    "tech house": ("Dance & Electronic", 90, 94, 8),
+    "techno": ("Dance & Electronic", 92, 90, 6),
+    "trance": ("Dance & Electronic", 92, 88, 6),
+    "dubstep": ("Dance & Electronic", 95, 85, 4),
+    "drum & bass": ("Dance & Electronic", 96, 86, 5),
+    "breakbeat": ("Dance & Electronic", 90, 88, 10),
+    "uk garage": ("Dance & Electronic", 90, 94, 8),
+    "alternative": ("Rock & Alternative", 82, 58, 28),
+    "rock": ("Rock & Alternative", 88, 55, 20),
+    "hard rock": ("Rock & Alternative", 92, 52, 15),
+    "metal": ("Rock & Alternative", 96, 48, 5),
+    "punk": ("Rock & Alternative", 92, 58, 12),
+    "grunge": ("Rock & Alternative", 90, 52, 15),
+    "britpop": ("Rock & Alternative", 82, 58, 30),
+    "indie rock": ("Rock & Alternative", 80, 62, 30),
+    "singer/songwriter": ("Indie & Folk", 65, 55, 60),
+    "folk": ("Indie & Folk", 62, 50, 68),
+    "americana": ("Indie & Folk", 66, 52, 60),
+    "country": ("Indie & Folk", 70, 62, 55),
+    "acoustic": ("Indie & Folk", 58, 52, 70),
+    "r&b/soul": ("R&B & Soul", 80, 80, 24),
+    "r&b": ("R&B & Soul", 80, 80, 24),
+    "soul": ("R&B & Soul", 76, 74, 35),
+    "funk": ("R&B & Soul", 84, 88, 18),
+    "neo-soul": ("R&B & Soul", 72, 75, 40),
+    "hip-hop/rap": ("Hip-Hop & Rap", 85, 84, 15),
+    "hip-hop": ("Hip-Hop & Rap", 85, 84, 15),
+    "rap": ("Hip-Hop & Rap", 88, 82, 12),
+    "trap": ("Hip-Hop & Rap", 88, 85, 10),
+    "soundtrack": ("Soundtrack & Film", 65, 45, 50),
+    "score": ("Soundtrack & Film", 65, 45, 50),
+    "classical": ("Soundtrack & Film", 60, 35, 75),
+    "pop": ("Pop & Mainstream", 78, 78, 25),
+    "k-pop": ("Pop & Mainstream", 88, 88, 15),
+    "j-pop": ("Pop & Mainstream", 86, 86, 18),
+}
+
+# In-memory LRU dynamic cache
+_DYNAMIC_GENRE_CACHE: Dict[str, Tuple[str, str, int, int, int]] = {}
+
 def _norm(s: str) -> str:
     if not s:
         return ""
@@ -26,221 +75,61 @@ def _norm(s: str) -> str:
     t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode("utf-8")
     return t.lower().strip()
 
-# Artist to primary genre & subgenre taxonomy map
-# (Genre, Sub-genre, Energy 0-100, Danceability 0-100, Acousticness 0-100)
-ARTIST_GENRE_MAP: Dict[str, Tuple[str, str, int, int, int]] = {
-    # --- Dance & Electronic / House / DnB / Nu-Disco ---
-    "barry can't swim": ("Dance & Electronic", "Deep House / Electronic", 84, 88, 15),
-    "barry cant swim": ("Dance & Electronic", "Deep House / Electronic", 84, 88, 15),
-    "mild minds": ("Dance & Electronic", "Melodic House / Downtempo", 82, 85, 20),
-    "two lanes": ("Dance & Electronic", "Melodic Electronic / Chill House", 80, 82, 22),
-    "nora van elken": ("Dance & Electronic", "Melodic House / EDM", 86, 88, 12),
-    "mathieu koss": ("Dance & Electronic", "Vocal Dance / House", 85, 88, 14),
-    "svidden": ("Dance & Electronic", "Electropop / Progressive House", 88, 88, 12),
-    "seeb": ("Dance & Electronic", "Tropical House / Electropop", 88, 90, 10),
-    "odyssey": ("Dance & Electronic", "Dance / Club", 86, 86, 15),
-    "sigma": ("Dance & Electronic", "Drum & Bass / Liquid DnB", 94, 86, 8),
-    "emily makis": ("Dance & Electronic", "Drum & Bass / Vocal DnB", 92, 85, 10),
-    "krasia": ("Dance & Electronic", "Drum & Bass / Neuro", 95, 84, 6),
-    "eskei83": ("Dance & Electronic", "Drum & Bass / Bass Music", 96, 86, 5),
-    "pirapus": ("Dance & Electronic", "Drum & Bass / Jump Up", 96, 84, 5),
-    "kanine": ("Dance & Electronic", "Drum & Bass / Dancefloor", 97, 85, 4),
-    "dutchican soul": ("Dance & Electronic", "Soulful House / Deep House", 86, 92, 10),
-    "the vision": ("Dance & Electronic", "Nu-Disco / Classic House", 88, 92, 12),
-    "moodena": ("Dance & Electronic", "Disco House / Funk", 87, 92, 12),
-    "ezel": ("Dance & Electronic", "Afro House / Deep House", 85, 90, 15),
-    "johnny fiasco": ("Dance & Electronic", "Chicago House / Tech House", 88, 92, 8),
-    "kerri chandler": ("Dance & Electronic", "Deep House / Garage", 88, 92, 10),
-    "klaus veen": ("Dance & Electronic", "UK Garage / Deep House", 90, 94, 8),
-    "khamsin": ("Dance & Electronic", "Future Bass / Melodic", 84, 82, 18),
-    "chase & status": ("Dance & Electronic", "Drum & Bass / Jungle", 96, 88, 4),
-    "sub focus": ("Dance & Electronic", "Drum & Bass / Dancefloor", 95, 88, 5),
-    "wilkinson": ("Dance & Electronic", "Drum & Bass / Liquid", 94, 86, 8),
-    "dimension": ("Dance & Electronic", "Drum & Bass / Dancefloor", 95, 88, 5),
-    "netsky": ("Dance & Electronic", "Drum & Bass / Liquid", 94, 86, 8),
-    "fred again..": ("Dance & Electronic", "Club / UK Electronic", 88, 90, 15),
-    "fred again": ("Dance & Electronic", "Club / UK Electronic", 88, 90, 15),
-    "bicep": ("Dance & Electronic", "Electronic / Breakbeat", 90, 88, 10),
-    "disclosure": ("Dance & Electronic", "UK Garage / House", 90, 94, 8),
-    "daft punk": ("Dance & Electronic", "French House / Nu-Disco", 94, 96, 4),
-    "avicii": ("Dance & Electronic", "Melodic House / Festival EDM", 92, 90, 12),
-    "calvin harris": ("Dance & Electronic", "EDM / Electropop", 94, 94, 6),
-    "skrillex": ("Dance & Electronic", "Dubstep / Bass Music", 96, 88, 4),
-    "diplo": ("Dance & Electronic", "EDM / Dancehall", 92, 94, 6),
-    "lsd": ("Dance & Electronic", "Psychedelic Pop / EDM", 90, 85, 10),
-    "tiesto": ("Dance & Electronic", "EDM / Big Room", 94, 92, 6),
-    "martin garrix": ("Dance & Electronic", "Festival EDM", 94, 92, 6),
-    "david guetta": ("Dance & Electronic", "Dance-Pop / EDM", 92, 94, 8),
-    "marshmello": ("Dance & Electronic", "Future Bass / EDM", 90, 90, 10),
-    "kygo": ("Dance & Electronic", "Tropical House", 86, 88, 16),
-    "rufus du sol": ("Dance & Electronic", "Live Electronic / Melodic House", 85, 86, 18),
-    "camelphat": ("Dance & Electronic", "Tech House / Melodic Techno", 90, 92, 8),
-    "fisher": ("Dance & Electronic", "Tech House / Club", 94, 95, 5),
-    "chris lake": ("Dance & Electronic", "Tech House / Club", 93, 95, 6),
-    "john summit": ("Dance & Electronic", "Tech House / Club", 93, 94, 6),
-    "dom dolla": ("Dance & Electronic", "Tech House / Club", 93, 94, 6),
-    "meduza": ("Dance & Electronic", "Deep House / EDM", 90, 92, 8),
-    "alesso": ("Dance & Electronic", "Progressive House / EDM", 92, 90, 10),
-    "galantis": ("Dance & Electronic", "Electropop / Dance", 92, 92, 8),
-    "deadmau5": ("Dance & Electronic", "Progressive House / Electro", 90, 88, 10),
-    "flume": ("Dance & Electronic", "Future Bass / Experimental", 88, 82, 15),
-    "odesza": ("Dance & Electronic", "Chillwave / Future Bass", 86, 80, 20),
-    "san holo": ("Dance & Electronic", "Future Bass / Indie Electronic", 85, 80, 22),
-    "illenium": ("Dance & Electronic", "Melodic Dubstep / Future Bass", 88, 75, 18),
-    "zedd": ("Dance & Electronic", "Electro House / Dance-Pop", 92, 90, 8),
-    "carly rae jepsen": ("Dance & Electronic", "Synth-Pop / Dance-Pop", 88, 90, 10),
-    "ava max": ("Dance & Electronic", "Electropop / Euro-Dance", 92, 94, 8),
-    "olivia holt": ("Dance & Electronic", "Dance-Pop / Electropop", 86, 88, 14),
+def _fetch_dynamic_artist_genre(artist: str) -> Optional[Tuple[str, str, int, int, int]]:
+    """Dynamically resolves canonical genre from live public music registry."""
+    clean = _norm(artist)
+    if not clean or clean in ("unknown", "unknown artist", "various artists"):
+        return None
 
-    # --- Rock & Alternative / Britpop ---
-    "coldplay": ("Rock & Alternative", "Britpop / Alt-Rock", 80, 58, 35),
-    "imagine dragons": ("Rock & Alternative", "Alt-Rock / Arena Rock", 88, 68, 20),
-    "travis": ("Rock & Alternative", "Britpop / Post-Britpop", 74, 52, 45),
-    "suede": ("Rock & Alternative", "Britpop / Glam Rock", 82, 55, 30),
-    "the faim": ("Rock & Alternative", "Pop-Rock / Alt-Rock", 86, 62, 22),
-    "fun.": ("Rock & Alternative", "Indie Pop / Baroque Pop", 84, 64, 25),
-    "train": ("Rock & Alternative", "Roots Rock / Adult Pop", 78, 62, 35),
-    "tonight": ("Rock & Alternative", "Pop-Rock / Alt-Rock", 82, 60, 28),
-    "echosmith": ("Rock & Alternative", "Indie Pop / Pop-Rock", 78, 65, 30),
-    "harry styles": ("Rock & Alternative", "Soft Rock / Pop-Rock", 76, 72, 34),
-    "olivia rodrigo": ("Rock & Alternative", "Pop-Punk / Alt-Rock", 88, 70, 22),
-    "queen": ("Rock & Alternative", "Classic Rock / Arena Rock", 90, 70, 20),
-    "metallica": ("Rock & Alternative", "Heavy Metal / Thrash", 95, 50, 5),
-    "nirvana": ("Rock & Alternative", "Grunge / Alt-Rock", 92, 55, 15),
-    "pink floyd": ("Rock & Alternative", "Progressive Rock / Psychedelic", 70, 40, 30),
-    "oasis": ("Rock & Alternative", "Britpop / Rock", 88, 55, 25),
-    "blur": ("Rock & Alternative", "Britpop / Alt-Rock", 84, 62, 25),
-    "radiohead": ("Rock & Alternative", "Art Rock / Alt-Rock", 76, 50, 35),
-    "arctic monkeys": ("Rock & Alternative", "Indie Rock / Post-Punk", 88, 65, 20),
-    "the killers": ("Rock & Alternative", "Indie Rock / Synth-Rock", 90, 68, 18),
-    "muse": ("Rock & Alternative", "Space Rock / Alt-Rock", 92, 55, 15),
-    "foo fighters": ("Rock & Alternative", "Post-Grunge / Hard Rock", 92, 55, 15),
-    "linkin park": ("Rock & Alternative", "Nu-Metal / Alt-Rock", 94, 58, 12),
-    "green day": ("Rock & Alternative", "Punk Rock / Pop-Punk", 92, 58, 15),
-    "red hot chili peppers": ("Rock & Alternative", "Funk Rock / Alt-Rock", 88, 72, 20),
-    "the 1975": ("Rock & Alternative", "Indie Pop / Synth-Pop", 82, 75, 25),
-    "florence + the machine": ("Rock & Alternative", "Indie Rock / Baroque Pop", 85, 55, 30),
-    "kings of leon": ("Rock & Alternative", "Southern Rock / Alt-Rock", 86, 60, 25),
-    "the strokes": ("Rock & Alternative", "Garage Rock / Indie Rock", 88, 65, 18),
-    "snow patrol": ("Rock & Alternative", "Alt-Rock / Power Ballad", 76, 48, 40),
-    "keane": ("Rock & Alternative", "Piano Rock / Britpop", 75, 50, 42),
-    "fall out boy": ("Rock & Alternative", "Pop-Punk / Alt-Rock", 90, 62, 15),
-    "paramore": ("Rock & Alternative", "Pop-Punk / Alt-Rock", 90, 65, 18),
-    "twenty one pilots": ("Rock & Alternative", "Indie Pop / Alt-Hip-Hop", 84, 75, 20),
-    "u2": ("Rock & Alternative", "Post-Punk / Arena Rock", 85, 60, 25),
+    if clean in _DYNAMIC_GENRE_CACHE:
+        return _DYNAMIC_GENRE_CACHE[clean]
 
-    # --- Indie & Folk / Acoustic ---
-    "jason mraz": ("Indie & Folk", "Acoustic Pop / Singer-Songwriter", 68, 68, 60),
-    "james bay": ("Indie & Folk", "Indie Singer-Songwriter / Soul", 70, 55, 55),
-    "james blunt": ("Indie & Folk", "Acoustic Pop / Singer-Songwriter", 66, 52, 60),
-    "dido": ("Indie & Folk", "Folk-Pop / Downtempo", 68, 60, 45),
-    "bbc children in need": ("Indie & Folk", "All-Star Charity Ballad", 70, 45, 55),
-    "gabrielle aplin": ("Indie & Folk", "Folk-Pop / Indie Singer", 62, 55, 55),
-    "billie eilish": ("Indie & Folk", "Electropop / Alt-Pop", 65, 70, 35),
-    "vance joy": ("Indie & Folk", "Indie Folk / Acoustic", 70, 65, 65),
-    "george ezra": ("Indie & Folk", "Folk-Pop / Roots", 76, 70, 50),
-    "dean lewis": ("Indie & Folk", "Acoustic Pop / Ballad", 68, 55, 60),
-    "hozier": ("Indie & Folk", "Blues Rock / Indie Soul", 82, 62, 45),
-    "mumford & sons": ("Indie & Folk", "Folk Rock / Bluegrass", 88, 60, 45),
-    "the lumineers": ("Indie & Folk", "Folk Rock / Americana", 78, 62, 55),
-    "passenger": ("Indie & Folk", "Folk-Pop / Acoustic", 64, 55, 70),
-    "tom odell": ("Indie & Folk", "Indie Pop / Piano Ballad", 68, 48, 65),
-    "jack johnson": ("Indie & Folk", "Acoustic / Surf Rock", 62, 65, 75),
-    "john mayer": ("Indie & Folk", "Blues / Pop Singer-Songwriter", 74, 66, 50),
-    "bon iver": ("Indie & Folk", "Indie Folk / Chamber Pop", 60, 45, 70),
+    try:
+        url = f"https://itunes.apple.com/search?term={urllib.parse.quote(clean)}&entity=musicArtist&limit=1"
+        data = fetch_json(url, cache_ttl=86400 * 7)  # 7-day persistent cache
+        if data and "results" in data and len(data["results"]) > 0:
+            raw_genre = (data["results"][0].get("primaryGenreName") or "").strip().lower()
+            if raw_genre:
+                # Direct match in taxonomy
+                if raw_genre in CANONICAL_GENRE_TAXONOMY:
+                    primary, nrg, dnc, aco = CANONICAL_GENRE_TAXONOMY[raw_genre]
+                    result = (primary, raw_genre.title(), nrg, dnc, aco)
+                    _DYNAMIC_GENRE_CACHE[clean] = result
+                    return result
+                # Partial match in taxonomy
+                for k, (primary, nrg, dnc, aco) in CANONICAL_GENRE_TAXONOMY.items():
+                    if k in raw_genre or raw_genre in k:
+                        result = (primary, raw_genre.title(), nrg, dnc, aco)
+                        _DYNAMIC_GENRE_CACHE[clean] = result
+                        return result
+                # Unmapped primary genre
+                result = ("Pop & Mainstream", raw_genre.title(), 75, 75, 25)
+                _DYNAMIC_GENRE_CACHE[clean] = result
+                return result
+    except Exception:
+        pass
 
-    # --- R&B & Soul ---
-    "the weeknd": ("R&B & Soul", "Synthwave / Dark R&B", 86, 88, 14),
-    "beyonce": ("R&B & Soul", "Contemporary R&B / Pop", 84, 82, 20),
-    "sza": ("R&B & Soul", "Alt-R&B / Neo-Soul", 75, 75, 30),
-    "frank ocean": ("R&B & Soul", "Art Pop / Neo-Soul", 72, 65, 40),
-    "alicia keys": ("R&B & Soul", "Soul / R&B Piano", 76, 68, 40),
-    "john legend": ("R&B & Soul", "Neo-Soul / R&B Piano", 72, 62, 45),
-    "sam smith": ("R&B & Soul", "Soul-Pop / Ballad", 74, 65, 35),
-    "steve lacy": ("R&B & Soul", "Bedroom Pop / Neo-Soul", 76, 80, 25),
-    "labrinth": ("R&B & Soul", "Art Pop / Soul", 78, 72, 22),
-    "amy winehouse": ("R&B & Soul", "Soul / Jazz Pop", 78, 68, 35),
-    "adele": ("R&B & Soul", "Soul-Pop / Power Ballad", 72, 50, 50),
-    "leon bridges": ("R&B & Soul", "Retro Soul / R&B", 74, 72, 45),
-    "daniel caesar": ("R&B & Soul", "Neo-Soul / R&B", 68, 65, 55),
-    "giveon": ("R&B & Soul", "Baritone R&B / Soul", 70, 60, 45),
-
-    # --- Hip-Hop & Rap ---
-    "post malone": ("Hip-Hop & Rap", "Melodic Trap / Pop-Rap", 78, 80, 25),
-    "drake": ("Hip-Hop & Rap", "Hip-Hop / Contemporary R&B", 78, 82, 18),
-    "travis scott": ("Hip-Hop & Rap", "Psychedelic Trap", 90, 85, 10),
-    "kendrick lamar": ("Hip-Hop & Rap", "Conscious Hip-Hop", 88, 82, 15),
-    "j. cole": ("Hip-Hop & Rap", "Hip-Hop / Storytelling", 84, 80, 20),
-    "eminem": ("Hip-Hop & Rap", "Hardcore Hip-Hop", 92, 80, 10),
-    "kanye west": ("Hip-Hop & Rap", "Experimental Hip-Hop", 88, 82, 15),
-    "central cee": ("Hip-Hop & Rap", "UK Drill / Trap", 88, 84, 12),
-    "stormzy": ("Hip-Hop & Rap", "Grime / UK Hip-Hop", 90, 80, 15),
-    "dave": ("Hip-Hop & Rap", "Conscious UK Rap", 85, 80, 20),
-    "21 savage": ("Hip-Hop & Rap", "Trap / Hip-Hop", 86, 84, 12),
-    "future": ("Hip-Hop & Rap", "Trap / Auto-Tune", 88, 86, 10),
-    "juice wrld": ("Hip-Hop & Rap", "Emo Rap / Melodic", 84, 78, 20),
-    "mac miller": ("Hip-Hop & Rap", "Jazz Rap / Alt-Hip-Hop", 78, 76, 30),
-
-    # --- Pop & Mainstream ---
-    "taylor swift": ("Pop & Mainstream", "Synth-Pop / Contemporary", 75, 78, 28),
-    "dua lipa": ("Dance & Electronic", "Nu-Disco / Electropop", 88, 92, 12),
-    "p!nk": ("Pop & Mainstream", "Pop-Rock / Power Pop", 86, 75, 20),
-    "pink": ("Pop & Mainstream", "Pop-Rock / Power Pop", 86, 75, 20),
-    "charlie puth": ("Pop & Mainstream", "Pop-Funk / Contemporary", 80, 82, 22),
-    "maroon 5": ("Pop & Mainstream", "Pop-Rock / Funk-Pop", 82, 80, 20),
-    "ellie goulding": ("Pop & Mainstream", "Electropop / Synth-Pop", 85, 84, 18),
-    "ed sheeran": ("Pop & Mainstream", "Acoustic Pop / Pop", 74, 70, 42),
-    "bruno mars": ("Pop & Mainstream", "Funk-Pop / R&B-Pop", 88, 90, 15),
-    "ariana grande": ("Pop & Mainstream", "R&B / Dance-Pop", 82, 86, 18),
-    "justin bieber": ("Pop & Mainstream", "Dance-Pop / R&B", 80, 82, 20),
-    "katy perry": ("Pop & Mainstream", "Pop / Electropop", 88, 85, 15),
-    "rihanna": ("Pop & Mainstream", "Pop / Dancehall / R&B", 86, 88, 15),
-    "lady gaga": ("Pop & Mainstream", "Electropop / Dance-Pop", 90, 88, 12),
-    "sabrina carpenter": ("Pop & Mainstream", "Nu-Disco Pop / Dance-Pop", 84, 86, 16),
-    "chappell roan": ("Pop & Mainstream", "Synth-Pop / Glam Pop", 88, 84, 15),
-    "benson boone": ("Pop & Mainstream", "Indie-Pop / Piano Ballad", 74, 60, 45),
-    "one direction": ("Pop & Mainstream", "Pop-Rock / Teen Pop", 72, 70, 30),
-    "sia": ("Pop & Mainstream", "Electropop / Power Pop", 85, 80, 18),
-    "liam payne": ("Pop & Mainstream", "Dance-Pop / R&B", 80, 82, 15),
-    "jamie miller": ("Pop & Mainstream", "Soul-Pop / Ballad", 68, 62, 40),
-    "jordana bryant": ("Pop & Mainstream", "Country-Pop / Teen Pop", 70, 68, 38),
-    "alex sampson": ("Pop & Mainstream", "Indie-Pop / Contemporary", 72, 74, 25),
-    "the vamps": ("Pop & Mainstream", "Pop-Rock / Power Pop", 84, 76, 22),
-    "alexander stewart": ("Pop & Mainstream", "Pop-Soul / Acoustic", 65, 58, 45),
-    "matt hansen": ("Pop & Mainstream", "Indie-Pop / Melodic", 68, 64, 38),
-    "new hope club": ("Pop & Mainstream", "Pop-Rock / Indie Pop", 78, 75, 26),
-    "why don't we": ("Pop & Mainstream", "Boyband Pop / Dance-Pop", 82, 80, 18),
-    "new rules": ("Pop & Mainstream", "Pop-Rock / Acoustic Pop", 76, 70, 32),
-    "anne-marie": ("Pop & Mainstream", "Dance-Pop / UK Pop", 84, 82, 16),
-    "lewis capaldi": ("Pop & Mainstream", "Power Ballad / Soul-Pop", 64, 45, 60),
-    "selena gomez": ("Pop & Mainstream", "Dance-Pop / Synth-Pop", 80, 82, 20),
-    "camila cabello": ("Pop & Mainstream", "Latin Pop / Pop", 84, 86, 18),
-    "shawn mendes": ("Pop & Mainstream", "Pop-Rock / Acoustic", 76, 70, 35),
-    "onerepublic": ("Pop & Mainstream", "Pop-Rock / Synth-Pop", 85, 75, 22),
-    "jonas brothers": ("Pop & Mainstream", "Pop-Rock / Dance-Pop", 84, 80, 20),
-    "tate mcrae": ("Pop & Mainstream", "Dance-Pop / Alt-Pop", 86, 88, 16),
-    "gracie abrams": ("Indie & Folk", "Bedroom Pop / Indie", 64, 52, 60),
-}
+    return None
 
 
 def classify_track_dna(artist: str, title: str) -> Dict[str, Any]:
     art_clean = _norm(artist)
     tit_clean = _norm(title)
 
-    # 1. Exact or substring match in artist database
-    for key, data in ARTIST_GENRE_MAP.items():
-        if key == art_clean or (len(key) > 3 and key in art_clean):
-            genre, sub, nrg, dnc, aco = data
-            return {
-                "genre": genre,
-                "sub_genre": sub,
-                "color": GENRE_COLORS.get(genre, "#94a3b8"),
-                "energy": nrg,
-                "danceability": dnc,
-                "acoustic": aco
-            }
+    # 1. Dynamic live API resolution (Zero hardcoding)
+    dyn = _fetch_dynamic_artist_genre(art_clean)
+    if dyn:
+        genre, sub, nrg, dnc, aco = dyn
+        return {
+            "genre": genre,
+            "sub_genre": sub,
+            "color": GENRE_COLORS.get(genre, "#94a3b8"),
+            "energy": nrg,
+            "danceability": dnc,
+            "acoustic": aco
+        }
 
-    # 2. Heuristic fallback based on title / artist tokens
+    # 2. Token-based heuristic fallback (for offline or unreleased indie tracks)
     combined = f"{art_clean} {tit_clean}"
     if any(k in combined for k in (
         "dj", "remix", "club", "dance", "electronic", "synth", "house", "techno", "dubstep", "bass",
@@ -272,7 +161,7 @@ def classify_track_dna(artist: str, title: str) -> Dict[str, Any]:
     if any(k in combined for k in ("soundtrack", "theme", "score", "ost", "orchestra", "symphony")):
         return {"genre": "Soundtrack & Film", "sub_genre": "Cinematic Score", "color": GENRE_COLORS["Soundtrack & Film"], "energy": 65, "danceability": 45, "acoustic": 50}
 
-    # Default to Pop & Mainstream
+    # Default general fallback
     return {"genre": "Pop & Mainstream", "sub_genre": "Modern Pop", "color": GENRE_COLORS["Pop & Mainstream"], "energy": 75, "danceability": 75, "acoustic": 25}
 
 

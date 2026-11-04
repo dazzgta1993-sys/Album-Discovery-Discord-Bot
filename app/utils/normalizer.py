@@ -246,3 +246,9 @@ def clean_title_clutter(title: str) -> str:
     t = re.sub(r"\s*-\s*(?:Official\s+(?:Video|Audio|Music\s+Video)|Audio|Lyrics?)\s*$", "", t, flags=re.IGNORECASE).strip()
     return t or title
 
+
+
+def clean_master_title(title: str) -> str:
+    """Strips edition suffixes and clutter from an album title for clean canonical matching."""
+    from app.services.taxonomy import clean_master_title as _cmt
+    return _cmt(title)

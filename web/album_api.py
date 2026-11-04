@@ -9,7 +9,7 @@ search_log = logging.getLogger("search")
 
 async def api_album_tracks(request: web.Request) -> web.Response:
     from app.services import deezer_api, musicbrainz_api
-    from app.utils.normalizer import clean_master_title
+    from app.services.taxonomy import clean_master_title
     from core.player import AudioTrack
 
     aid = request.query.get("id", "").strip()

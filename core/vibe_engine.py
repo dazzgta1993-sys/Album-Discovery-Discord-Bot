@@ -56,6 +56,21 @@ def is_vibe_worthy(track_dict: dict, artist_fans: int = 0, clean_only: bool = Fa
     if artist_fans and artist_fans < 3000:
         return False
 
+    # 4. Studio Autoplay Shield: Filter out live concert recordings, arena bootlegs, and live sessions
+    # (Live music remains 100% playable when manually searched or queued).
+    if str(art).strip().lower() != "live":
+        _live_pat = re.compile(
+            r"\b(live at|live from|live in|live on|live version|live recording|live acoustic|live session)\b|"
+            r"[\(\[](?:19\d\d/|20\d\d/)?live\b|"
+            r"\s*-\s*live\b",
+            re.IGNORECASE
+        )
+        if _live_pat.search(title):
+            return False
+        alb = (track_dict.get("album") or track_dict.get("album_title") or "")
+        if alb and _live_pat.search(alb):
+            return False
+
     return True
 
 

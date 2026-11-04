@@ -57,7 +57,7 @@ async def api_status(request: web.Request) -> web.Response:
             vc_name = vc.name
             vc_members = [m.display_name for m in vc.members if not m.bot]
             is_conn = player.is_connected
-            is_playing = player.is_playing
+            is_playing = bool(player.is_playing and player.current_track)
             if player.current_track:
                 current_track_dict = player.current_track.to_dict()
 
@@ -153,7 +153,7 @@ async def api_guild_state(request: web.Request) -> web.Response:
             "available_channels": voice_channels
         },
         "player": {
-            "is_playing": player.is_playing,
+            "is_playing": bool(player.is_playing and player.current_track),
             "is_paused": is_paused,
             "volume": int(player.volume * 100),
             "loop_mode": player.loop_mode,

@@ -615,12 +615,12 @@
    Modern Clean Studio Dashboard Theme Overhaul
    ============================================================ */
 /* Unified Top Header */
-.studio-header {
+header, .studio-header {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   padding: 10px 24px !important;
-  background: rgba(12, 16, 26, 0.92) !important;
+  background: rgba(12, 16, 26, 0.94) !important;
   backdrop-filter: blur(20px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
   gap: 16px !important;
@@ -628,80 +628,92 @@
   box-sizing: border-box !important;
 }
 
-.header-search-dock {
+.nav-center {
   flex: 1 !important;
-  max-width: 540px !important;
+  max-width: 600px !important;
+  margin: 0 16px !important;
   display: flex !important;
   align-items: center !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.header-fast-play, .header-search-dock {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
   border-radius: 9999px !important;
-  padding: 4px 6px 4px 14px !important;
+  padding: 3px 6px 3px 14px !important;
+  gap: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
   transition: all 0.25s ease !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+  box-sizing: border-box !important;
 }
 
-.header-search-dock:focus-within {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border-color: rgba(139, 92, 246, 0.6) !important;
-  box-shadow: 0 0 16px rgba(139, 92, 246, 0.25) !important;
+.header-fast-play:focus-within, .header-search-dock:focus-within {
+  background: rgba(0, 0, 0, 0.6) !important;
+  border-color: rgba(168, 85, 247, 0.7) !important;
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.35) !important;
 }
 
-.search-dock-icon {
+.header-fast-play .search-icon, .search-dock-icon {
   font-size: 0.85rem !important;
-  margin-right: 8px !important;
   color: #a78bfa !important;
+  flex-shrink: 0 !important;
 }
 
-.header-search-input {
+.fast-play-input, .header-search-input {
   flex: 1 !important;
+  width: 100% !important;
+  min-width: 140px !important;
   background: transparent !important;
   border: none !important;
   outline: none !important;
   color: #f8fafc !important;
-  font-size: 0.82rem !important;
+  font-size: 0.84rem !important;
   font-weight: 500 !important;
 }
 
-.header-search-input::placeholder {
+.fast-play-input::placeholder, .header-search-input::placeholder {
   color: #64748b !important;
 }
 
-.btn-dock-play {
+.btn-fast-play, .btn-dock-play {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
   color: #fff !important;
   border: none !important;
-  padding: 6px 14px !important;
+  padding: 6px 16px !important;
   border-radius: 9999px !important;
   font-size: 0.76rem !important;
   font-weight: 700 !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
   white-space: nowrap !important;
+  flex-shrink: 0 !important;
   box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35) !important;
 }
 
-.btn-dock-play:hover {
+.btn-fast-play:hover, .btn-dock-play:hover {
   transform: translateY(-1px) !important;
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5) !important;
 }
 
-.btn-dock-queue {
-  background: rgba(255, 255, 255, 0.06) !important;
+.btn-fast-queue, .btn-dock-queue {
+  background: rgba(255, 255, 255, 0.08) !important;
   color: #e2e8f0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
   padding: 6px 12px !important;
   border-radius: 9999px !important;
   font-size: 0.76rem !important;
   font-weight: 600 !important;
   cursor: pointer !important;
-  margin-left: 5px !important;
   transition: all 0.2s ease !important;
   white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
-.btn-dock-queue:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
+.btn-fast-queue:hover, .btn-dock-queue:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
   color: #fff !important;
 }
 

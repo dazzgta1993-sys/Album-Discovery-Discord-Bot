@@ -10,27 +10,52 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <link rel="stylesheet" href="/static/style.css?v=3.7">
-  <link rel="stylesheet" href="/static/command_center.css?v=4.0">
+  <link rel="stylesheet" href="/static/style.css?v=6.0.0">
+  <link rel="stylesheet" href="/static/command_center.css?v=6.0.0">
+  <style>
+    /* Guaranteed Header & DNA Layout Essentials */
+    header { display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 16px; background: rgba(12, 16, 26, 0.95); border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .brand { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    .nav-center { flex: 1; max-width: 640px; margin: 0 12px; display: flex; align-items: center; }
+    .header-fast-play { width: 100%; display: flex; align-items: center; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px; padding: 3px 6px 3px 14px; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .header-fast-play:focus-within { border-color: #a855f7; box-shadow: 0 0 14px rgba(168, 85, 247, 0.35); }
+    .header-fast-play .search-icon { color: #94a3b8; font-size: 0.85rem; flex-shrink: 0; }
+    .fast-play-input { flex: 1; width: 100%; min-width: 140px; background: transparent; border: none; outline: none; color: #fff; font-size: 0.84rem; font-weight: 500; }
+    .btn-fast-play { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff; border: none; border-radius: 999px; padding: 6px 16px; font-size: 0.76rem; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4); }
+    .btn-fast-queue { background: rgba(255, 255, 255, 0.08); color: #e2e8f0; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px; padding: 6px 12px; font-size: 0.76rem; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+    .nav-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .brain-dna-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .dna-bar-container { width: 100%; height: 16px; background: rgba(0, 0, 0, 0.45); border-radius: 999px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08); margin-bottom: 10px; }
+    .dna-bar { display: flex !important; flex-direction: row !important; width: 100%; height: 100%; }
+    .dna-bar-segment { height: 100%; display: flex !important; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px; box-sizing: border-box; }
+    .dna-genres-grid { display: flex !important; flex-wrap: wrap !important; gap: 6px; margin-bottom: 10px; }
+    .dna-genre-pill { display: inline-flex !important; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 20px; font-size: 0.72rem; font-weight: 600; color: #e2e8f0; }
+    .dna-metrics-row { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px; margin-bottom: 10px; }
+    .dna-metric-box { background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .dna-artists-row { display: flex !important; align-items: center; gap: 6px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+    .dna-artist-pill { font-size: 0.68rem; padding: 2px 8px; border-radius: 4px; background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.25); color: #e9d5ff; }
+  </style>
 </head>
 <body>
 
   <!-- Top Navigation Header -->
-  <header class="studio-header">
+  <header>
     <div class="brand">
       <div class="brand-logo">💿</div>
       <div>
-        <div class="brand-title">Album Discovery</div>
-        <div class="brand-subtitle">Discord Studio DJ</div>
+        <div class="brand-title">Album Discovery Hub</div>
+        <div class="brand-subtitle">Discord Studio Command Center</div>
       </div>
     </div>
 
-    <!-- Integrated Global Fast-Play Command Bar -->
-    <div class="header-search-dock">
-      <span class="search-dock-icon">⚡</span>
-      <input type="text" id="fastPlayInput" class="header-search-input" placeholder="Search song, artist, paste YouTube or Spotify link..." onkeydown="if(event.key==='Enter') executeFastPlay(true)" />
-      <button class="btn-dock-play" onclick="executeFastPlay(true)" title="Play immediately">▶ Play</button>
-      <button class="btn-dock-queue" onclick="executeFastPlay(false)" title="Add to queue">+ Queue</button>
+    <!-- Center Command Search Bar -->
+    <div class="nav-center">
+      <div class="header-fast-play">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="fastPlayInput" class="fast-play-input" placeholder="Search track, artist, album, paste link..." onkeydown="if(event.key==='Enter') executeFastPlay(true)" />
+        <button class="btn-fast-play" onclick="executeFastPlay(true)" title="Play immediately">▶ Play</button>
+        <button class="btn-fast-queue" onclick="executeFastPlay(false)" title="Add to queue">+ Queue</button>
+      </div>
     </div>
 
     <div class="nav-right">
@@ -636,7 +661,7 @@
     <span id="toastMsg">Action completed</span>
   </div>
 
-  <script src="/static/app.js?v=4.0"></script>
-  <script src="/static/command_center.js?v=4.0"></script>
+  <script src="/static/app.js?v=6.0.0"></script>
+  <script src="/static/command_center.js?v=6.0.0"></script>
 </body>
 </html>

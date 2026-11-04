@@ -123,3 +123,13 @@ async def api_dna(request: web.Request) -> web.Response:
     dna = dna_engine.compute_session_music_dna(tracks)
     return web.json_response(dna)
 
+@web.middleware
+async def static_cache_control_middleware(request: web.Request, handler):
+    response = await handler(request)
+    if request.path.startswith("/static/") or request.path == "/":
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+

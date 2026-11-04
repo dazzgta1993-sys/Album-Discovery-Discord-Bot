@@ -934,7 +934,8 @@ async def api_radio(request: web.Request) -> web.Response:
         return web.json_response({"stations": [], "error": str(e)})
 
 def create_web_app(bot: discord.Client) -> web.Application:
-    app = web.Application()
+    from web.album_api import static_cache_control_middleware
+    app = web.Application(middlewares=[static_cache_control_middleware])
     app["bot"] = bot
 
     # Routes

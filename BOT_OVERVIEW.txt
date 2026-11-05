@@ -1,6 +1,6 @@
 ================================================================================
           ALBUM DISCOVERY — DISCORD MUSIC BOT ARCHITECTURE & OVERVIEW
-                              (Updated: November 2026)
+                              (Updated: November 2026 — Full Studio Feature Release)
 ================================================================================
 
 PROJECT SUMMARY:
@@ -42,19 +42,25 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
      closely synchronized with Discord voice audio across pause and resume events.
 
 4. 🧬 Real-Time Session Music DNA & Acoustic Spectrum Visualizer:
-   - Analyzes the active session to classify tracks across 10 core musical genres and 30+ subgenres.
+   - 100% Dynamic Public Taxonomy Resolution: Classifies tracks across 10 core musical genres and 
+     30+ subgenres via live MusicBrainz and Last.fm taxonomy graphs without static artist limits.
    - Live Audio Metrics: Computes real-time Energy (0-100), Danceability (0-100), and 
      Electronic-to-Acoustic sonic ratios.
    - Multi-Color Spectrum Capsule: Proportional visual bar displaying exact session genre distribution.
    - Top DNA Influences: Maps contributing artists with tailored subgenre badges.
    - Thumbs Up / Down Training: Interactive feedback system persisting to SQLite taste profiles.
 
-5. 🌐 Unified 9-Platform Intelligence Ecosystem:
+5. 🎙️ Native Discord Voice Channel Status Synchronization:
+   - Automatically sets Discord's native voice channel status bar to the currently playing 
+     song ("🎵 Artist - Title") without creating distracting spam messages in text channels.
+   - Automatically clears when playback stops or the queue completes.
+
+6. 🌐 Unified 9-Platform Intelligence Ecosystem:
    - Seamlessly blends Deezer Studio Masters, YouTube Music, YouTube Live/Concerts, 
      Spotify catalogs, Apple Music / iTunes high-res covers, SoundCloud DJ mixes, 
      MusicBrainz archival discographies, and real-time Official UK/US Billboard charts.
 
-6. 🖥️ Studio Command Center Web Hub (http://localhost:8905):
+7. 🖥️ Studio Command Center Web Hub (http://localhost:8905):
    - Full desktop-grade web application featuring:
      * Fast-Play universal input bar
      * 94 Curated High-Definition Cloud Radio Stations
@@ -110,7 +116,8 @@ support 9 distinct intelligence & streaming engines:
 2. REAL-TIME WEB COMMAND CENTER (http://localhost:8905)
 ================================================================================
 
-Built with a lightweight async aiohttp backend and a responsive studio dark-mode UI:
+Built with a lightweight async aiohttp backend and a responsive studio dark-mode UI
+with adaptive split-screen & mobile layouts (zero header overlap):
 
 1. Command Center Top Strip & Fast-Play Bar:
    - System Active Pulse: Real-time green pulse beacon showing live background bot connectivity.
@@ -147,6 +154,8 @@ Built with a lightweight async aiohttp backend and a responsive studio dark-mode
    - Persistent reverse-chronological list of recently played tracks.
    - Displays track title, artist, album, runtime, artwork, and relative timestamp.
    - One-click "▶ Replay Now" and "+ Queue" buttons.
+   - 🗑️ "Clear History" Action: One-click header button with confirmation dialog to wipe 
+     playback history records immediately via POST /api/history/clear.
 
 5. 🧠 Vibe Engine & AI Autoplay Control Hub:
    - Live Telemetry Card: Shows current Vibe Anchor artist, lock state, autoplay chain count, 
@@ -186,6 +195,8 @@ Built with a lightweight async aiohttp backend and a responsive studio dark-mode
 
 11. 📜 Diagnostics & Live Logs Tab:
     - Color-coded real-time log inspector filtered by All, Searches, Audio, Bot, or Errors.
+    - 🧹 "Clear Logs" Action: One-click header button with confirmation dialog to flush 
+      active diagnostic logs in real time via POST /api/logs.
 
 ===============================================================================
 3. CORE ARCHITECTURE & AUDIO ENGINE

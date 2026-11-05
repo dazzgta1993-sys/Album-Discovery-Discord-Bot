@@ -506,23 +506,13 @@ class GuildPlayer:
             if not stream_url:
                 try:
                     if not next_track.video_id:
-                        if next_track.source == "youtube":
-                            yt_tracks = await asyncio.to_thread(stream_service.search_youtube_tracks, next_track.title, limit=1)
-                            if yt_tracks:
-                                raw_vid = yt_tracks[0].get("video_id") or yt_tracks[0].get("id", "")
-                                next_track.video_id = raw_vid.replace("yt_", "")
-                                next_track.title = yt_tracks[0].get("title", next_track.title)
-                                if yt_tracks[0].get("artist") and next_track.artist in ("YouTube Search", "Direct Query"):
-                                    next_track.artist = yt_tracks[0].get("artist")
-                                if yt_tracks[0].get("cover") and not next_track.cover_url:
-                                    next_track.cover_url = yt_tracks[0].get("cover")
-                                raw_dur = yt_tracks[0].get("duration", 0)
-                                if isinstance(raw_dur, (int, float)) or (isinstance(raw_dur, str) and str(raw_dur).isdigit()):
-                                    next_track.duration_seconds = int(raw_dur)
-                                    next_track.duration_str = AudioTrack._format_duration(int(raw_dur))
-                                else:
-                                    next_track.duration_str = str(raw_dur)
-                        else:
+                        # Always prefer 6-pass YouTube Music studio resolver unless explicit live/remix/DJ set query
+                        q_combined = f"{next_track.artist} {next_track.title}".lower()
+                        is_explicit_video_query = bool(re.search(
+                            r"\b(live|concert|session|boiler room|tiny desk|remix|bootleg|mashup|dj set|full set|cover)\b",
+                            q_combined
+                        ))
+                        if not is_explicit_video_query:
                             res = await asyncio.to_thread(
                                 stream_service.resolve_track_stream,
                                 artist=next_track.artist,
@@ -540,6 +530,24 @@ class GuildPlayer:
                                         next_track.duration_str = AudioTrack._format_duration(dur)
                                     except Exception:
                                         pass
+
+                        if not next_track.video_id:
+                            yt_q = f"{next_track.artist} {next_track.title}".strip() if next_track.artist not in ("YouTube Search", "Direct Query", "YouTube") else next_track.title
+                            yt_tracks = await asyncio.to_thread(stream_service.search_youtube_tracks, yt_q, limit=1)
+                            if yt_tracks:
+                                raw_vid = yt_tracks[0].get("video_id") or yt_tracks[0].get("id", "")
+                                next_track.video_id = raw_vid.replace("yt_", "")
+                                next_track.title = yt_tracks[0].get("title", next_track.title)
+                                if yt_tracks[0].get("artist") and next_track.artist in ("YouTube Search", "Direct Query"):
+                                    next_track.artist = yt_tracks[0].get("artist")
+                                if yt_tracks[0].get("cover") and not next_track.cover_url:
+                                    next_track.cover_url = yt_tracks[0].get("cover")
+                                raw_dur = yt_tracks[0].get("duration", 0)
+                                if isinstance(raw_dur, (int, float)) or (isinstance(raw_dur, str) and str(raw_dur).isdigit()):
+                                    next_track.duration_seconds = int(raw_dur)
+                                    next_track.duration_str = AudioTrack._format_duration(int(raw_dur))
+                                else:
+                                    next_track.duration_str = str(raw_dur)
 
                     if next_track.video_id:
                         s_url, hdrs = await asyncio.to_thread(stream_service.get_stream_info, next_track.video_id, self.audio_quality)

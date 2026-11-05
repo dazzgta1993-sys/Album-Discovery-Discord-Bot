@@ -549,6 +549,30 @@ def resolve_track_stream(
     clean_core = _clean_target_title(clean_title)
     clean_isrc = (isrc or "").strip().upper()
 
+    # Guardrail Pre-Enrichment: If duration <= 0 (e.g. direct search or Spotify link),
+    # enrich canonical studio duration & ISRC from Deezer/iTunes first so +/-5s check is always active.
+    if (not duration or duration <= 0) and clean_title:
+        try:
+            from . import deezer_api
+            q_artist_part = clean_artist if clean_artist.lower() not in ("youtube", "youtube search", "direct query", "unknown", "unknown artist") else ""
+            dz_q = f"{q_artist_part} {clean_core}".strip()
+            dz_hits = deezer_api.search_tracks(dz_q, limit=3)
+            for hit in (dz_hits or []):
+                h_title = (hit.get("title") or "").strip()
+                h_art = (hit.get("artist") or "").strip()
+                if _is_title_match(h_title, clean_title) and (not q_artist_part or _is_artist_match({"channel": h_art, "artists": [h_art]}, q_artist_part)):
+                    if int(hit.get("duration") or 0) >= 45:
+                        duration = int(hit["duration"])
+                    if not q_artist_part and h_art:
+                        clean_artist = h_art
+                    if not clean_album and hit.get("album"):
+                        clean_album = hit["album"]
+                    if not track_id and hit.get("id"):
+                        track_id = str(hit["id"])
+                    break
+        except Exception:
+            pass
+
     cache_key = f"{clean_artist.lower()}:::{clean_title.lower()}:::{clean_album.lower()}"
     now = time.time()
 

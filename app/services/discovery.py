@@ -189,7 +189,7 @@ def search_music(query: str, limit: int = 48) -> dict:
                 "title": t.get("title") or "Unknown Title",
                 "artist": t.get("artist") or "YouTube",
                 "cover": t.get("cover") or "/placeholder-cover.svg",
-                "year": "2024",
+                "year": str(t.get("year") or t.get("release_date") or "")[:4],
                 "category": "Singles & Remixes",
                 "record_type": "single",
                 "tracks_count": 1,
@@ -620,21 +620,27 @@ def get_album_details(album_id: str) -> dict:
         details = musicbrainz_api.get_release_group_details(aid)
     elif aid.startswith("yt_"):
         vid = aid[3:]
+        from . import stream_service
+        yt_meta = stream_service.get_video_metadata(vid) or {}
+        yt_title = yt_meta.get("title") or "YouTube Single"
+        yt_artist = yt_meta.get("artist") or "YouTube"
+        yt_dur = int(yt_meta.get("duration") or 0)
+        yt_year = str(yt_meta.get("release_year") or yt_meta.get("upload_date") or "")[:4]
         details = {
             "id": aid,
-            "title": "YouTube Single",
-            "artist": "YouTube",
-            "cover": f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg",
-            "year": "2024",
+            "title": yt_title,
+            "artist": yt_artist,
+            "cover": yt_meta.get("thumbnail") or f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg",
+            "year": yt_year if yt_year.isdigit() else "",
             "category": "Singles & Remixes",
             "record_type": "single",
             "tracks": [{
                 "id": aid,
                 "video_id": vid,
-                "title": "YouTube Single",
-                "artist": "YouTube",
+                "title": yt_title,
+                "artist": yt_artist,
                 "album": "YouTube Audio",
-                "duration": 0,
+                "duration": yt_dur,
                 "track_num": 1,
                 "disc_num": 1,
             }]
@@ -797,17 +803,47 @@ def get_sonic_sister_albums(details: dict) -> list[dict]:
         except Exception as e:
             _log.debug("Fallback landmark sister album error: %s", e)
     return sister_records[:3]
+_PRESERVED_DUO_BANDS = {
+    "ac/dc", "hall & oates", "daryl hall & john oates", "simon & garfunkel",
+    "earth, wind & fire", "florence + the machine", "florence and the machine",
+    "mumford & sons", "guns n' roses", "brooks & dunn", "tegan and sara",
+    "coheed and cambria", "crosby, stills, nash & young", "crosby, stills & nash",
+    "emerson, lake & palmer", "peter, paul and mary", "kool & the gang",
+    "kc and the sunshine band", "sly and the family stone", "echo & the bunnymen",
+    "belle and sebastian", "angus & julia stone", "above & beyond", "chase & status"
+}
+
+def split_collab_artists(artist_str: str) -> list[str]:
+    """Split composite collaboration strings ('Calvin Harris, Ellie Goulding', 'Daft Punk feat. Pharrell')
+    into individual artists while preserving band names that contain punctuation."""
+    raw = (artist_str or "").strip()
+    if not raw:
+        return []
+    if raw.lower() in _PRESERVED_DUO_BANDS:
+        return [raw]
+    parts = re.split(
+        r"\s+(?:feat\.?|ft\.?|featuring|with|vs\.?|x)\s+|\s*,\s*|\s*&\s*|\s*;\s*|\s*/\s*",
+        raw,
+        flags=re.IGNORECASE
+    )
+    cleaned = [p.strip() for p in parts if p and len(p.strip()) > 1]
+    return cleaned if cleaned else [raw]
+
 def apply_artist_separation(tracks: list[dict], min_distance: int = 4, exclude_artists: list[str] = None, max_per_artist: int = 2) -> list[dict]:
-    """Ensure no two songs by the same artist appear consecutively or within `min_distance` tracks of each other,
-    penalize recently played artists, and cap each artist to `max_per_artist` songs per batch."""
+    """Ensure no two songs by the same artist (including featured/collab credits) appear consecutively
+    or within `min_distance` tracks of each other, penalize recently played artists, and cap per artist."""
     if not tracks:
         return []
     import random
     from collections import defaultdict
-    recent_artists = [a.lower().strip() for a in (exclude_artists or []) if a]
+    recent_artists = set()
+    for a in (exclude_artists or []):
+        for sub_a in split_collab_artists(a):
+            recent_artists.add(sub_a.lower().strip())
     by_artist = defaultdict(list)
     for t in tracks:
-        art_key = (t.get("artist") or "").lower().strip()
+        credits = [c.lower().strip() for c in split_collab_artists(t.get("artist") or "")]
+        art_key = credits[0] if credits else (t.get("artist") or "").lower().strip()
         if len(by_artist[art_key]) < max_per_artist:
             by_artist[art_key].append(t)
     ordered = []
@@ -823,17 +859,17 @@ def apply_artist_separation(tracks: list[dict], min_distance: int = 4, exclude_a
         for art, trks in list(by_artist.items()):
             if not trks:
                 continue
-            last_pos = last_artist_pos.get(art, -999)
-            dist = current_idx - last_pos
-            # Hard constraint: NEVER pick the same artist consecutively (dist <= 1)
-            if dist <= 1 and current_idx > 0:
+            cand_credits = [c.lower().strip() for c in split_collab_artists(trks[0].get("artist") or art)]
+            min_dist_seen = min((current_idx - last_artist_pos.get(c, -999)) for c in cand_credits)
+            # Hard constraint: NEVER pick the same primary or featured artist consecutively (dist <= 1)
+            if min_dist_seen <= 1 and current_idx > 0:
                 continue
             score = 0
-            if dist < min_distance:
-                score -= (min_distance - dist) * 100
+            if min_dist_seen < min_distance:
+                score -= (min_distance - min_dist_seen) * 100
             else:
-                score += dist * 10
-            if art in recent_artists:
+                score += min_dist_seen * 10
+            if any(c in recent_artists for c in cand_credits):
                 score -= 600
             score += random.uniform(0, 15)
             if score > best_score:
@@ -842,7 +878,8 @@ def apply_artist_separation(tracks: list[dict], min_distance: int = 4, exclude_a
         if best_art and by_artist[best_art]:
             chosen_track = by_artist[best_art].pop(0)
             ordered.append(chosen_track)
-            last_artist_pos[best_art] = current_idx
+            for c in split_collab_artists(chosen_track.get("artist") or best_art):
+                last_artist_pos[c.lower().strip()] = current_idx
             remaining_count -= 1
         else:
             break
@@ -856,13 +893,18 @@ def get_autoplay_dj_mix(artist_name: str = "", artist_id: str = "", exclude_ids:
     vibe_label = (artist_name or "").strip()
     aid = str(artist_id or "").strip()
     aname = str(artist_name or "").strip()
-    # 1. Dynamically resolve artist details from Deezer if artist name was supplied
+    collab_parts = split_collab_artists(aname)
+    # 1. Dynamically resolve artist details from Deezer (splitting composite collaborations so we never hit a 0-fan stub)
     if not aid and aname:
         try:
-            artists = deezer_api.search_artists(aname, limit=4)
-            if artists:
-                aid = str(artists[0].get("id") or "")
-                vibe_label = artists[0].get("name", aname)
+            for cand_name in ([collab_parts[0]] if len(collab_parts) > 1 else [aname]) + collab_parts[1:]:
+                artists = deezer_api.search_artists(cand_name, limit=4)
+                valid_artists = [a for a in (artists or []) if int(a.get("fans") or 0) >= 500] or artists
+                if valid_artists:
+                    aid = str(valid_artists[0].get("id") or "")
+                    vibe_label = valid_artists[0].get("name", cand_name)
+                    aname = vibe_label
+                    break
         except Exception:
             pass
     # 2. CLOUD SOURCE A: Deezer Live Artist Radio & Related Artists Graph

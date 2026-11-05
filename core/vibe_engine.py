@@ -165,9 +165,15 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                         current_art = cand_artists[0]["name"]
                         break
 
-        # Anchor Protection & Intelligent Vibe Flow
-        anchor_art = (player.vibe_anchor_artist or "").strip()
-        seed_art = current_art.strip()
+        # Split composite collaboration strings ('Calvin Harris, Ellie Goulding') into primary artist
+        # so Deezer Artist Radio & Related Artists never hit a 0-fan composite stub profile.
+        from app.services.discovery import split_collab_artists
+        raw_anchor = (player.vibe_anchor_artist or "").strip()
+        anchor_parts = split_collab_artists(raw_anchor)
+        anchor_art = anchor_parts[0] if anchor_parts else raw_anchor
+
+        seed_parts = split_collab_artists(current_art.strip())
+        seed_art = seed_parts[0] if seed_parts else current_art.strip()
         target_art = seed_art
 
         if getattr(player, "is_anchor_locked", False):
@@ -208,8 +214,15 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
             recent_titles.add(seed_track.title.lower())
 
         cooldown_n = getattr(player, "artist_cooldown", 10)
-        recent_artists = {t.artist.lower().strip() for t in list(player.history)[-cooldown_n:]} if cooldown_n > 0 else set()
+        recent_artists = set()
+        if cooldown_n > 0:
+            for hist_t in list(player.history)[-cooldown_n:]:
+                recent_artists.add(hist_t.artist.lower().strip())
+                for cred in split_collab_artists(hist_t.artist):
+                    recent_artists.add(cred.lower().strip())
         recent_artists.add(current_art.lower().strip())
+        for cred in split_collab_artists(current_art):
+            recent_artists.add(cred.lower().strip())
         if player._prewarmed_autoplay_track and player.vibe_mode != "deep_dive":
             recent_artists.add(player._prewarmed_autoplay_track.artist.lower().strip())
         if player._deck3_autoplay_track and player.vibe_mode != "deep_dive":

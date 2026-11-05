@@ -4,6 +4,7 @@ Provides structured release categories (Studio Albums, EPs, Singles, Live, Compi
 import json
 import re
 import time
+from datetime import datetime
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -358,7 +359,8 @@ def get_artist_categorized_discography(artist_name: str, limit: int = 100) -> di
                 if statuses and all(s in ("Bootleg", "Promotion", "Pseudo-Release") for s in statuses):
                     category = "Other"
 
-            if category == "Studio Albums" and year and year > "2025":
+            max_studio_year = str(datetime.now().year + 1)
+            if category == "Studio Albums" and year and year > max_studio_year:
                 category = "Other"
 
             cover_url = f"{CAA_BASE}/{rg_id}/front-500"
@@ -554,7 +556,9 @@ def get_release_group_details(rg_id: str) -> dict:
         "cover": cover,
         "release_date": date_str,
         "year": year,
-        "genre": "Hip-Hop/R&B" if "akon" in artist.lower() else "Music",
+        "genre": (lambda a: (
+            __import__("app.services.dna_engine", fromlist=["get_artist_genres"]).get_artist_genres(a) or ["Music"]
+        )[0])(artist),
         "record_type": "Album",
         "tracks_count": len(tracks),
         "duration": sum(t["duration"] for t in tracks),

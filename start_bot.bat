@@ -38,7 +38,7 @@ if errorlevel 1 (
 )
 
 :: 3. Auto-install Python dependencies if not yet installed
-"%PY_EXE%" -c "import discord, aiohttp, yt_dlp" >nul 2>&1
+"%PY_EXE%" -c "import discord, aiohttp, yt_dlp, ytmusicapi, dotenv" >nul 2>&1
 if errorlevel 1 (
     echo [INFO] First-time setup: Installing required dependencies from requirements.txt...
     "%PY_EXE%" -m pip install -r requirements.txt

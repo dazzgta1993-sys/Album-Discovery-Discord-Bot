@@ -1,6 +1,6 @@
 ================================================================================
           ALBUM DISCOVERY — DISCORD MUSIC BOT ARCHITECTURE & OVERVIEW
-                              (Updated: November 2026 — Full Studio Feature Release)
+                  (Updated: November 2026 — Full Studio Feature Release)
 ================================================================================
 
 PROJECT SUMMARY:
@@ -35,9 +35,12 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
    - Anti-Junk Shield: Actively filters out hoodtrap, type beats, TikTok remixes, 
      karaoke, skits (<65s), and low-listen amateur spam.
 
-3. 🎧 Accurate Playback & Pause-Offset Synchronization:
+3. 🎧 Accurate Playback, Smart Queueing & Pause-Offset Synchronization:
    - Tracks real-time elapsed seconds with precise pause-duration accounting 
      (time.time() - play_start_time - total_paused_time).
+   - Smart Queue Guard: /play automatically adds tracks to the queue when music is already 
+     playing (including during AI Autoplay transitions) without cutting off the current song, 
+     while /playnow immediately interrupts and plays right now.
    - Ensures visual seeker bars, timestamp indicators, and dashboard telemetry stay 
      closely synchronized with Discord voice audio across pause and resume events.
 
@@ -52,7 +55,7 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
 
 5. 🎙️ Native Discord Voice Channel Status Synchronization:
    - Automatically sets Discord's native voice channel status bar to the currently playing 
-     song ("🎵 Artist - Title") without creating distracting spam messages in text channels.
+     song ("🎶 Artist - Title") without creating distracting spam messages in text channels.
    - Automatically clears when playback stops or the queue completes.
 
 6. 🌐 Unified 9-Platform Intelligence Ecosystem:
@@ -60,13 +63,15 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
      Spotify catalogs, Apple Music / iTunes high-res covers, SoundCloud DJ mixes, 
      MusicBrainz archival discographies, and real-time Official UK/US Billboard charts.
 
-7. 🖥️ Studio Command Center Web Hub (http://localhost:8905):
+7. 🖥️ Studio Command Center Web Hub (http://localhost:8905) & Full 2-Way Sync:
+   - Every action in Discord (/dj, /volume, /quality, /loop, /shuffle, or embed buttons) and 
+     every click on the Web Dashboard stays 100% synchronized in real time and persists to SQLite.
    - Full desktop-grade web application featuring:
-     * Fast-Play universal input bar
+     * Fast-Play universal input bar (▶ Play Immediately or + Queue)
      * 94 Curated High-Definition Cloud Radio Stations
      * 67-Year Landmark Time Machine (1960 — 2026)
      * Real-time pulsing soundwave visualizer
-     * Listen Live in Browser (low-latency Web Opus audio monitor)
+     * Listen Live in Browser (low-latency Web Opus/MP3 audio monitor)
      * Fluid mouse-wheel volume adjustment & universal Enter key shortcuts
 
 ================================================================================
@@ -124,21 +129,21 @@ with adaptive split-screen & mobile layouts (zero header overlap):
    - Triple-Deck Pipeline Badge: Live indicator showing standby/cued status.
    - Audio Codec Badge: Displays active streaming codec (Opus 48kHz HQ).
    - Interactive Loop Badge: One-click cycle between Loop Off, Loop Track, and Loop Queue.
-   - ⚡ Fast-Play Bar: Instantly play or queue any song title, artist name, album name, or 
-     direct YouTube / Spotify / Apple Music link right from the top of the screen.
+   - ⚡ Fast-Play Bar: Instantly play (▶ Play) or queue (+ Queue) any song title, artist name, 
+     album name, or direct YouTube / Spotify / Apple Music link right from the top of the screen.
 
 2. Live Player Deck & Soundwave Visualizer:
    - Server selector with instant multi-guild state polling.
    - Quick Voice Channel Dropdown: One-click joining or switching into any voice channel.
    - Frequency Soundwave Visualizer: Animated purple equalizer bars that pulse synchronously 
      whenever music is actively playing in Discord.
-   - Transport Buttons: Play/Pause, Skip, Previous Replay, Shuffle, Stop.
+   - Transport Buttons: Play/Pause, Skip, Shuffle, Loop, Stop.
    - Zero-Jitter Volume Slider: Real-time slider with mouse-wheel scrolling support, 
      instant scaling, and speaker icon one-click mute/unmute restoration.
    - ⚓ Vibe Anchor Badge & 1-Click Lock: Interactive pill showing current anchor artist with 
      instant toggle between Free Flow (🔓) and Locked (🔒) modes.
    - 🎧 Listen Live in Browser: Low-latency live browser audio monitor streaming 
-     the bot's Opus voice feed directly to desktop speakers or headphones.
+     the bot's audio feed directly to desktop speakers or headphones.
 
 3. Interactive Queue Tab & Triple-Deck Pipeline Banner:
    - Live queue badge counter with track duration and total upcoming runtime.
@@ -152,16 +157,16 @@ with adaptive split-screen & mobile layouts (zero header overlap):
 
 4. 🕒 Playback History Tab:
    - Persistent reverse-chronological list of recently played tracks.
-   - Displays track title, artist, album, runtime, artwork, and relative timestamp.
-   - One-click "▶ Replay Now" and "+ Queue" buttons.
+   - Displays track title, artist, album, runtime, artwork, and source badge.
+   - One-click "▶ Replay" and "+ Queue" buttons.
    - 🗑️ "Clear History" Action: One-click header button with confirmation dialog to wipe 
-     playback history records immediately via POST /api/history/clear.
+     in-memory and SQLite playback history records immediately via POST /api/guild/{id}/control.
 
 5. 🧠 Vibe Engine & AI Autoplay Control Hub:
    - Live Telemetry Card: Shows current Vibe Anchor artist, lock state, autoplay chain count, 
      Deck 2 Standby state, Deck 3 Pipeline state, and the latest AI routing decision.
    - Vibe Discovery Matrix: Switch between Artist Deep Dive (100% same artist), 
-     Collabs & Circle (collaborators/producers), Smart Vibe (default), and Wide Discovery.
+     Collabs & Circle (collaborators/producers), Smart Vibe (default), and Wild Discovery.
    - Drift & Depth Dials: Adjust drift frequency (1 to 10 songs) and catalog depth 
      (Top Hits vs Deep Cuts).
    - Decade & Era Lock: Filter recommendations to All Eras, 2020s, 2010s, 2000s, or 80s/90s Classics.
@@ -187,15 +192,15 @@ with adaptive split-screen & mobile layouts (zero header overlap):
    - Unified engine selector matching all 9 platforms.
 
 9. 🔥 Trending Charts Tab:
-   - Live UK Official Top 40 & Billboard charts with one-click play/add actions.
+   - Live UK Official Top 50, US Billboard Hot 50, Global Hits, and Official Album Charts.
 
 10. 💿 Discography & Albums Tab:
     - Deluxe vinyl showcase cards with glowing accents and disc depth shadow.
-    - Expandable "📋 View Tracklist" trays and "▶ Play Full LP" (queues album at head of queue).
+    - Expandable "📋 View Tracklist" trays and "▶ Play Release" / "+ Add Release" actions.
 
 11. 📜 Diagnostics & Live Logs Tab:
     - Color-coded real-time log inspector filtered by All, Searches, Audio, Bot, or Errors.
-    - 🧹 "Clear Logs" Action: One-click header button with confirmation dialog to flush 
+    - 🗑️ "Clear Logs" Action: One-click header button with confirmation dialog to flush 
       active diagnostic logs in real time via POST /api/logs.
 
 ===============================================================================
@@ -208,6 +213,8 @@ with adaptive split-screen & mobile layouts (zero header overlap):
      * Deck 1 (Live): Actively streaming to the Discord voice channel.
      * Deck 2 (Next Up): Buffers and holds the stream for the immediate next song.
      * Deck 3 (In The Chute): Resolves metadata and stream tokens 2 tracks ahead.
+   - Source-Bound Callback Protection: Prevents delayed FFmpeg process cleanup from 
+     clearing active playback flags during zero-gap transitions.
    - Double-Skip & Network Latency Protection: Even if members skip twice in rapid succession,
      playback begins instantly without buffering or waiting on API round-trips.
    - Dynamic Volume Transformer: Scales volume smoothly without resetting stream sockets.
@@ -224,49 +231,50 @@ with adaptive split-screen & mobile layouts (zero header overlap):
    - Anti-Repeat Radio Cooldown: Remembers recent tracks to prevent artist or title spam.
 
 3. Persistent SQLite WAL Database (store.py):
-   - Location: data/cache.db (with legacy fallback to data/bot_store.db)
-   - guild_settings: Stores volume, quality, autoplay, vibe mode, drift frequency, 
-     hit depth, cooldown, era filter, explicit shield, energy dial, and engine source.
-   - playback_history: Records all played tracks with guild ID, metadata, and timestamps.
-   - api_cache: Caches heavy MusicBrainz, Deezer, and Spotify API queries with TTL.
+   - Location: data/cache.db
+   - guild_settings: Non-destructively merges and persists volume, quality, loop mode, 
+     autoplay, anchor lock, vibe mode, drift frequency, hit depth, cooldown, era filter, 
+     explicit shield, energy dial, and engine source per guild.
+   - playback_history: Records played tracks with guild ID, metadata, and timestamps (plus instant clear).
+   - api_cache & stream_resolutions: Caches MusicBrainz, Deezer, Spotify, and stream lookups with TTL.
 
 4. Title Sanitizer & Normalizer (normalizer.py & taxonomy.py):
    - Cleans remastered, deluxe, re-issue, spatial audio, and junk tags to ensure 
      clean studio audio matching.
 
 ===============================================================================
-4. DISCORD SLASH COMMANDS (22 Active Commands)
+4. DISCORD SLASH COMMANDS (23 Active Commands)
 ===============================================================================
 
 Playback & Audio Controls:
-- /play <query> [source]      : Stream track/album/URL with choice of all 9 engines.
-- /playnow <query> [source]   : Instantly plays track right now (bypasses queue).
-- /skip                       : Skips current track to the next queued item.
-- /pause                      : Pauses current playback.
-- /resume                     : Resumes paused playback.
-- /stop                       : Stops playback, clears queue, and disconnects.
-- /queue                      : Displays paginated queue with runtime stats.
-- /nowplaying                 : Displays rich embed with interactive control buttons.
-- /volume <1-100>             : Sets volume percentage in real time.
-- /shuffle                    : Shuffles the server music queue (or re-rolls AI autoplay).
-- /loop <off|track|queue>     : Sets loop repeat mode.
-- /quality <auto|128k|192k|320k>: Switches streaming bitrate dynamically.
-- /history                    : Shows the last 10 tracks played in this server.
+- /play <query> [source]        : Plays immediately if idle, or adds to the queue if music is playing.
+- /playnow <query> [source]     : Immediately plays a track right now (bypasses queue).
+- /skip                         : Skips current track to the next queued or preloaded item.
+- /pause                        : Pauses current playback.
+- /resume                       : Resumes paused playback.
+- /stop                         : Stops playback, clears queue, and disconnects from voice.
+- /queue                        : Displays paginated queue with runtime stats.
+- /nowplaying                   : Displays rich embed with interactive control buttons.
+- /volume <1-100>               : Sets volume percentage in real time (synced with Web Hub).
+- /quality <auto|128k|192k|320k>: Switches streaming bitrate dynamically (synced with Web Hub).
+- /shuffle                      : Shuffles the queue (or re-rolls Deck 2 & Deck 3 AI tracks).
+- /loop <off|track|queue>       : Sets loop repeat mode (synced with Web Hub).
+- /history                      : Shows the last 10 tracks played in this server.
 
 AI DJ & Vibe Intelligence:
-- /dj [engine]                : Toggles Autoplay DJ or locks it to one of the 9 engines.
-- /brain                      : Displays live telemetry embed of active engine, anchor, 
-                                drift frequency, explicit shield, and last decision.
+- /dj [engine]                  : Toggles Autoplay DJ or locks it to one of the 9 engines.
+- /brain                        : Displays live telemetry embed of active engine, anchor, 
+                                  drift frequency, explicit shield, and last decision.
 
 Music Discovery & Discography:
-- /search <query> [source]    : Interactive dropdown search across all 9 engines.
-- /album <query>              : Canonical album card with interactive tracklist dropdown.
-- /artist <name>              : Artist profile with fan count, studio albums, and top hits.
-- /discography <artist>       : Categorized discography browser (Studio LPs, EPs, Live, Compilations).
-- /newreleases [limit]        : Fresh weekly editorial drops and studio releases.
-- /timemachine <year>         : Explores landmark albums from 1960 through 2026.
-- /charts [country]           : Queues live UK Top 40 or US Billboard chart tracks.
-- /radio                      : Streams from 94 curated cloud genre and vibe stations.
+- /search <query> [source]      : Interactive dropdown search across all 9 engines to queue tracks.
+- /album <query>                : Canonical album card with interactive tracklist & "Queue Entire Album".
+- /artist <name>                : Artist profile with fan count, studio albums, and top hits.
+- /discography <artist>         : Categorized discography browser (Studio LPs, EPs, Live, Compilations).
+- /newreleases [limit]          : Fresh weekly editorial drops and studio releases.
+- /timemachine <year>           : Explores landmark albums from 1960 through 2026.
+- /charts [country] [limit]     : Queues live UK Top 40, US Billboard, or Global chart tracks.
+- /radio                        : Streams from 94 curated cloud genre and vibe stations.
 
 ===============================================================================
 5. SYSTEM REQUIREMENTS & SPECIFICATIONS

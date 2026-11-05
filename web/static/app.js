@@ -682,7 +682,7 @@ async function clearQueue() { if (!confirm("Are you sure you want to clear the e
 async function clearHistory() { if (!confirm("Clear playback history and reset session DNA?")) return; await fetch("/api/guild/" + currentGuildId + "/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "clear_history" }) }); showToast("Playback history cleared"); pollGuildState(currentGuildId); if (typeof window.refreshMusicDna === "function") setTimeout(window.refreshMusicDna, 200); }
 async function moveQueueItem(from_index, to_index) { await fetch("/api/guild/" + currentGuildId + "/queue/move", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from_index, to_index }) }); pollGuildState(currentGuildId); }
 async function queuePlayNow(index) {
-  const qItem = document.querySelectorAll("#queueList .queue-item")[index];
+  const qItem = document.querySelectorAll("#queueList .track-item")[index];
   if (qItem) {
     const t = qItem.querySelector(".item-title");
     const a = qItem.querySelector(".item-artist");

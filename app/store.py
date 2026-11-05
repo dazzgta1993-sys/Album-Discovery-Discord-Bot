@@ -378,7 +378,7 @@ def delete_stream_url(video_id: str):
 
 
 def save_guild_settings(guild_id: str, settings: dict):
-    """Save persistent brain and player settings for a guild."""
+    """Save persistent brain and player settings for a guild (merges with existing settings)."""
     if not guild_id or not settings:
         return
     with _lock, _get_connection() as conn:
@@ -389,10 +389,20 @@ def save_guild_settings(guild_id: str, settings: dict):
                 updated_at REAL NOT NULL
             )
         """)
+        cursor = conn.cursor()
+        cursor.execute("SELECT settings_json FROM guild_settings WHERE guild_id = ?", (str(guild_id),))
+        row = cursor.fetchone()
+        merged = {}
+        if row and row[0]:
+            try:
+                merged = json.loads(row[0])
+            except Exception:
+                merged = {}
+        merged.update(settings)
         conn.execute("""
             INSERT OR REPLACE INTO guild_settings (guild_id, settings_json, updated_at)
             VALUES (?, ?, ?)
-        """, (str(guild_id), json.dumps(settings), time.time()))
+        """, (str(guild_id), json.dumps(merged), time.time()))
         conn.commit()
 
 
@@ -480,6 +490,26 @@ def load_playback_history(guild_id: str, limit: int = 50) -> list:
     except Exception as exc:
         _log.warning(f"load_playback_history error: {exc}")
         return []
+
+
+def clear_playback_history(guild_id: str):
+    """Clear all saved playback history for a guild in SQLite."""
+    if not guild_id:
+        return
+    try:
+        with _lock, _get_connection() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS playback_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id TEXT NOT NULL,
+                    track_json TEXT NOT NULL,
+                    played_at REAL NOT NULL
+                )
+            """)
+            conn.execute("DELETE FROM playback_history WHERE guild_id = ?", (str(guild_id),))
+            conn.commit()
+    except Exception as exc:
+        _log.warning(f"clear_playback_history error: {exc}")
 
 
 try:

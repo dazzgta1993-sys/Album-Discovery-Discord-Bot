@@ -755,15 +755,7 @@ def get_sonic_sister_albums(details: dict) -> list[dict]:
                     salb_id = str(alb.get("id") or "")
                     if salb_id and salb_id not in seen_ids:
                         seen_ids.add(salb_id)
-                        sister_records.append({
-                            "id": salb_id,
-                            "title": alb.get("title", ""),
-                            "artist": ra_name,
-                            "cover": alb.get("cover") or ra.get("picture", ""),
-                            "year": alb.get("year", ""),
-                            "genre": genre,
-                            "match_reason": f"Shared sonic DNA & lineage with {artist}"
-                        })
+                        sister_records.append({"id": salb_id, "title": alb.get("title", ""), "artist": ra_name, "cover": alb.get("cover") or ra.get("picture", ""), "year": alb.get("year", ""), "genre": genre, "match_reason": f"Shared sonic DNA & lineage with {artist}"})
                         break
         except Exception as e:
             _log.debug("Related artist sister album error: %s", e)
@@ -791,15 +783,7 @@ def get_sonic_sister_albums(details: dict) -> list[dict]:
                 salb_id = str(alb.get("id") or "")
                 if salb_id not in seen_ids:
                     seen_ids.add(salb_id)
-                    sister_records.append({
-                        "id": salb_id,
-                        "title": alb.get("title", ""),
-                        "artist": alb.get("artist", ""),
-                        "cover": alb.get("cover", ""),
-                        "year": alb.get("year", ""),
-                        "genre": alb.get("genre", genre),
-                        "match_reason": alb.get("desc") or f"Iconic companion in {alb.get('genre', genre)}"
-                    })
+                    sister_records.append({"id": salb_id, "title": alb.get("title", ""), "artist": alb.get("artist", ""), "cover": alb.get("cover", ""), "year": alb.get("year", ""), "genre": alb.get("genre", genre), "match_reason": alb.get("desc") or f"Iconic companion in {alb.get('genre', genre)}"})
         except Exception as e:
             _log.debug("Fallback landmark sister album error: %s", e)
     return sister_records[:3]
@@ -940,15 +924,7 @@ def get_autoplay_dj_mix(artist_name: str = "", artist_id: str = "", exclude_ids:
                 t_thumb = item.get("thumbnail") or ""
                 t_alb = item.get("album") or ""
                 if vid and t_title and t_artist:
-                    pool.append({
-                        "id": f"yt_{vid}",
-                        "title": t_title,
-                        "artist": t_artist,
-                        "album": t_alb,
-                        "duration": t_dur,
-                        "cover": t_thumb,
-                        "provider": "youtube"
-                    })
+                    pool.append({"id": f"yt_{vid}", "title": t_title, "artist": t_artist, "album": t_alb, "duration": t_dur, "cover": t_thumb, "provider": "youtube"})
         except Exception:
             pass
     # 4. If an artist seed is active and pool needs more tracks, pull deeper related peers (NOT generic pop charts)
@@ -962,15 +938,7 @@ def get_autoplay_dj_mix(artist_name: str = "", artist_id: str = "", exclude_ids:
                     t_title = (item.get("title") or "").strip()
                     t_artist = item.get("channel") or (item.get("artists")[0] if item.get("artists") else aname)
                     if vid and t_title and t_artist:
-                        pool.append({
-                            "id": f"yt_{vid}",
-                            "title": t_title,
-                            "artist": t_artist,
-                            "album": item.get("album") or "",
-                            "duration": item.get("duration_seconds") or 0,
-                            "cover": item.get("thumbnail") or "",
-                            "provider": "youtube"
-                        })
+                        pool.append({"id": f"yt_{vid}", "title": t_title, "artist": t_artist, "album": item.get("album") or "", "duration": item.get("duration_seconds") or 0, "cover": item.get("thumbnail") or "", "provider": "youtube"})
         except Exception:
             pass
     # 5. Generic Charts Fallback (ONLY when NO artist seed is active - Surprise Me / Global Mode)

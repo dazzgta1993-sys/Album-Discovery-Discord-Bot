@@ -416,7 +416,7 @@ async function toggleAnchorLock() {
         showToast("🔓 Anchor unlocked (Organic Flow)", "🌊");
       }
     }
-    if (typeof fetchGuildState === "function") fetchGuildState();
+    if (typeof pollGuildState === "function") pollGuildState(guildId);
   } catch (err) {
     console.error("toggleAnchorLock error:", err);
   }
@@ -451,7 +451,7 @@ window.updateAnchorBadge = function(p) {
 // Global Keyboard & Wheel Shortcuts Setup
 document.addEventListener("DOMContentLoaded", () => {
   // Volume Mouse Wheel
-  const volSlider = document.getElementById("volumeSlider");
+  const volSlider = document.getElementById("volSlider");
   if (volSlider) {
     volSlider.addEventListener("wheel", (e) => {
       e.preventDefault();
@@ -459,7 +459,7 @@ document.addEventListener("DOMContentLoaded", () => {
       let delta = e.deltaY < 0 ? 5 : -5;
       let next = Math.max(0, Math.min(100, cur + delta));
       volSlider.value = next;
-      if (typeof setVolume === "function") setVolume(next);
+      if (typeof onVolumeInput === "function") onVolumeInput(next);
     }, { passive: false });
   }
 
@@ -469,7 +469,7 @@ document.addEventListener("DOMContentLoaded", () => {
     searchInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        if (typeof searchTracks === "function") searchTracks();
+        if (typeof executeSearch === "function") executeSearch();
       }
     });
   }
@@ -479,7 +479,7 @@ document.addEventListener("DOMContentLoaded", () => {
     discoInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        if (typeof searchDiscography === "function") searchDiscography();
+        if (typeof executeDiscographySearch === "function") executeDiscographySearch();
       }
     });
   }

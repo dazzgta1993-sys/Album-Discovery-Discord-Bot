@@ -104,6 +104,7 @@ class GuildPlayer:
         self._prewarmed_autoplay_track: Optional[AudioTrack] = None
         self._deck3_autoplay_track: Optional[AudioTrack] = None
         self.vibe_anchor_artist: Optional[str] = None
+        self.is_anchor_locked: bool = False
         self.consecutive_autoplay_count: int = 0
         self.failed_tracks: set[str] = set()
         self._consecutive_resolve_failures: int = 0
@@ -143,6 +144,15 @@ class GuildPlayer:
                 if "era_filter" in saved: self.era_filter = str(saved["era_filter"])
                 if "vibe_energy" in saved: self.vibe_energy = str(saved["vibe_energy"])
                 if "vibe_engine_source" in saved: self.vibe_engine_source = str(saved["vibe_engine_source"])
+                if "autoplay" in saved: self.autoplay = bool(saved["autoplay"])
+                if "audio_quality" in saved and str(saved["audio_quality"]) in ("auto", "128k", "192k", "320k"):
+                    self.audio_quality = str(saved["audio_quality"])
+                if "loop_mode" in saved and str(saved["loop_mode"]) in ("off", "track", "queue"):
+                    self.loop_mode = str(saved["loop_mode"])
+                if "volume" in saved:
+                    try: self.volume = max(0.0, min(1.0, float(saved["volume"])))
+                    except Exception: pass
+                if "is_anchor_locked" in saved: self.is_anchor_locked = bool(saved["is_anchor_locked"])
         except Exception:
             pass
         self.last_brain_decision: str = "Brain System Online • Standby"

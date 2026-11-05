@@ -39,12 +39,22 @@ class PlayerControlsView(discord.ui.View):
         if len(self.player.queue) >= 2:
             self.player.shuffle()
             await self.player.update_player_message()
+        elif len(self.player.queue) == 0 and self.player.autoplay:
+            self.player._prewarmed_autoplay_track = None
+            self.player._deck3_autoplay_track = None
+            asyncio.create_task(self.player._prewarm_next_track())
+            await self.player.update_player_message()
 
     @discord.ui.button(label="🔁", style=discord.ButtonStyle.secondary, custom_id="btn_loop")
     async def loop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         modes = ["off", "track", "queue"]
         idx = (modes.index(self.player.loop_mode) + 1) % len(modes)
         self.player.loop_mode = modes[idx]
+        try:
+            from app import store
+            store.save_guild_settings(str(self.player.guild.id), {"loop_mode": self.player.loop_mode})
+        except Exception:
+            pass
         try:
             await interaction.response.defer()
         except Exception:

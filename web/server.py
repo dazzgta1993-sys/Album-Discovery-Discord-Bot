@@ -261,6 +261,12 @@ async def api_control(request: web.Request) -> web.Response:
         player.is_anchor_locked = not curr
         if player.is_anchor_locked and player.current_track:
             player.vibe_anchor_artist = player.current_track.artist
+        try:
+            from app import store
+            store.save_guild_settings(str(guild.id), {"is_anchor_locked": player.is_anchor_locked})
+        except Exception:
+            pass
+        asyncio.create_task(player.update_player_message())
         return web.json_response({
             "status": "ok",
             "is_locked": player.is_anchor_locked,
@@ -270,7 +276,7 @@ async def api_control(request: web.Request) -> web.Response:
         player.history.clear()
         try:
             from app import store
-            store.save_history(player.guild.id, [])
+            store.clear_playback_history(str(player.guild.id))
         except Exception:
             pass
         return web.json_response({"status": "ok", "message": "History cleared"})
@@ -278,6 +284,8 @@ async def api_control(request: web.Request) -> web.Response:
         try:
             vol = float(value) / 100.0
             player.set_volume(vol)
+            from app import store
+            store.save_guild_settings(str(guild.id), {"volume": player.volume})
         except (ValueError, TypeError):
             pass
     elif action == "set_loop":
@@ -288,13 +296,28 @@ async def api_control(request: web.Request) -> web.Response:
             # cycle
             curr_idx = modes.index(player.loop_mode) if player.loop_mode in modes else 0
             player.loop_mode = modes[(curr_idx + 1) % len(modes)]
+        try:
+            from app import store
+            store.save_guild_settings(str(guild.id), {"loop_mode": player.loop_mode})
+        except Exception:
+            pass
         asyncio.create_task(player.update_player_message())
     elif action == "set_autoplay":
         player.autoplay = bool(value)
+        try:
+            from app import store
+            store.save_guild_settings(str(guild.id), {"autoplay": player.autoplay})
+        except Exception:
+            pass
         asyncio.create_task(player.update_player_message())
     elif action == "set_quality":
         if value in ("auto", "128k", "192k", "320k"):
             player.set_quality(str(value))
+            try:
+                from app import store
+                store.save_guild_settings(str(guild.id), {"audio_quality": player.audio_quality})
+            except Exception:
+                pass
     elif action == "join_voice":
         ch_id = data.get("channel_id")
         channel = guild.get_channel(int(ch_id)) if ch_id else None
@@ -355,6 +378,7 @@ async def api_control(request: web.Request) -> web.Response:
                 "artist_cooldown": getattr(player, "artist_cooldown", 10),
                 "era_filter": getattr(player, "era_filter", "all"),
                 "vibe_energy": getattr(player, "vibe_energy", "auto"),
+                "vibe_engine_source": getattr(player, "vibe_engine_source", "auto"),
             })
         except Exception as e:
             log.warning(f"Failed to persist guild brain settings to store: {e}")
@@ -914,29 +938,6 @@ async def api_logs(request: web.Request) -> web.Response:
     return web.json_response({"logs": lines, "type": log_type})
 
 from web.album_api import api_album_tracks
-
-async def api_timemachine(request: web.Request) -> web.Response:
-    try:
-        from app.services import timemachine_service
-        year_str = request.query.get("year", "1999").strip()
-        year = int(year_str) if year_str.isdigit() else 1999
-        data = await asyncio.to_thread(timemachine_service.get_timemachine_albums, year)
-        years = await asyncio.to_thread(timemachine_service.get_timemachine_years)
-        return web.json_response({"year": year, "years": years, "albums": data.get("albums", [])})
-    except Exception as e:
-        return web.json_response({"year": 1999, "years": [], "albums": [], "error": str(e)})
-
-async def api_radio(request: web.Request) -> web.Response:
-    try:
-        from app.services import official_charts
-        radio_id = request.query.get("station", "").strip()
-        if radio_id:
-            tracks = await asyncio.to_thread(official_charts.get_live_radio_tracks, radio_id)
-            return web.json_response({"station": radio_id, "tracks": tracks})
-        stations = await asyncio.to_thread(official_charts.get_live_dj_stations, limit=100)
-        return web.json_response({"stations": stations})
-    except Exception as e:
-        return web.json_response({"stations": [], "error": str(e)})
 
 def create_web_app(bot: discord.Client) -> web.Application:
     from web.album_api import static_cache_control_middleware

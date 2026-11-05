@@ -111,7 +111,17 @@ class AlbumDiscoveryBot(commands.Bot):
         await self.change_presence(status=discord.Status.online, activity=activity)
 
     async def on_voice_state_update(self, member, before, after):
-        # Auto-disconnect only if everyone leaves, player is idle, and Autoplay is OFF
+        # 1. If the bot itself was disconnected from a voice channel, stop playback immediately and do not auto-reconnect
+        if self.user and member.id == self.user.id and before.channel and not after.channel:
+            guild = before.channel.guild
+            player = self.player_manager.players.get(guild.id)
+            if player:
+                log.info(f"[{guild.name}] Bot was disconnected from voice channel. Stopping playback.")
+                player.stop()
+                await player.disconnect()
+            return
+
+        # 2. Auto-disconnect only if everyone leaves, player is idle, and Autoplay is OFF
         if before.channel and (not after.channel or before.channel.id != after.channel.id):
             guild = before.channel.guild
             player = self.player_manager.players.get(guild.id)

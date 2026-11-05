@@ -461,6 +461,10 @@ class GuildPlayer:
                         if self.voice_client and self.voice_client.is_connected():
                             break
 
+            if getattr(self, "_is_stopped", False):
+                self.is_playing = False
+                return
+
             if not self.voice_client or not self.voice_client.is_connected():
                 target_channel = getattr(self.voice_client, "channel", None) or (self.guild.voice_channels[0] if self.guild.voice_channels else None)
                 if target_channel:

@@ -92,7 +92,7 @@ class GuildPlayer:
         self.autoplay: bool = AUTOPLAY_DJ
         self.audio_quality: str = "auto"
         
-        self.is_playing: bool = False
+        self._is_playing: bool = False
         self.play_start_time: float = 0.0
         self.total_paused_time: float = 0.0
         self.pause_start_time: float = 0.0
@@ -146,6 +146,18 @@ class GuildPlayer:
         except Exception:
             pass
         self.last_brain_decision: str = "Brain System Online • Standby"
+
+    @property
+    def is_playing(self) -> bool:
+        if getattr(self, "_is_stopped", False):
+            return False
+        if self.voice_client and (self.voice_client.is_playing() or self.voice_client.is_paused()):
+            return True
+        return bool(getattr(self, "_is_playing", False))
+
+    @is_playing.setter
+    def is_playing(self, value: bool):
+        self._is_playing = bool(value)
 
     @property
     def is_connected(self) -> bool:
@@ -602,15 +614,17 @@ class GuildPlayer:
                 self.total_paused_time = 0.0
                 self.pause_start_time = 0.0
 
-                def _after_play(error):
+                def _after_play(error, expected_source=transformed_source):
                     if error:
                         log.error(f"Playback error in {self.guild.name}: {error}")
-                    self._cancel_progress_task()
-                    self._active_source = None
-                    self.is_playing = False
+                    if self._active_source is not expected_source:
+                        return
                     if getattr(self, "_suppress_after", False) or getattr(self, "_is_stopped", False):
                         self._suppress_after = False
                         return
+                    self._cancel_progress_task()
+                    self._active_source = None
+                    self.is_playing = False
                     loop = getattr(self.bot, 'loop', None) or asyncio.get_event_loop()
                     if loop and loop.is_running():
                         fut = asyncio.run_coroutine_threadsafe(self.play_next(), loop)

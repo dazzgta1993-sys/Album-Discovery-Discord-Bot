@@ -69,6 +69,24 @@ class PlayerControlsView(discord.ui.View):
             pass
         self.player.stop()
 
+    @discord.ui.button(label="❤️ Save to Crate", style=discord.ButtonStyle.secondary, custom_id="btn_favorite", row=1)
+    async def favorite_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        t = self.player.current_track
+        if not t:
+            await interaction.response.send_message("❌ Nothing is currently playing to save.", ephemeral=True)
+            return
+        from app import store
+        res = store.add_to_crate(str(self.player.guild.id), {
+            "title": t.title, "artist": t.artist, "album": t.album,
+            "duration": t.duration_str, "duration_seconds": t.duration_seconds,
+            "cover": t.cover_url, "video_id": t.video_id, "source": getattr(t, "source", "deezer")
+        }, playlist_name="Favorites")
+        self.player.handle_feedback(t.artist, t.title, "up")
+        if res.get("added"):
+            await interaction.response.send_message(f"❤️ Saved **{t.artist} — {t.title}** to **My Crate (Favorites)**! ({res.get('count', 1)} saved)", ephemeral=True)
+        else:
+            await interaction.response.send_message(f"❤️ **{t.artist} — {t.title}** is already in **My Crate (Favorites)**!", ephemeral=True)
+
 
 class AlbumSelectView(discord.ui.View):
     def __init__(self, player, album_data: dict, tracks: List[dict], user_name: str):

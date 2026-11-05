@@ -87,9 +87,9 @@ Before running the bot, ensure you have:
 
 ---
 
-## 💬 Slash Commands Reference (23 Commands)
+## 💬 Slash Commands Reference (25 Commands)
 
-### 🎵 Playback & Audio Controls
+### 🎵 Playback, Crate & Audio Controls
 - `/play <query> [source]` — Plays immediately if nothing is playing, or **automatically adds to the queue** if music is already playing (supports tracks, albums, and YouTube/Spotify/SoundCloud/Deezer URLs across all 9 engines).
 - `/playnow <query> [source]` — Immediately plays a track right now, bypassing the queue.
 - `/skip` — Instant zero-gap skip to the next queued or preloaded Deck 2 track.
@@ -97,12 +97,14 @@ Before running the bot, ensure you have:
 - `/resume` — Resumes paused audio playback.
 - `/stop` — Stops audio, clears the queue, and disconnects from voice.
 - `/queue` — Displays the current queue with track durations and upcoming count.
-- `/nowplaying` — Rich embed with high-res artwork, live progress scrubber, and interactive playback buttons (`⏯️`, `⏭️`, `🔀`, `🔁`, `⏹️`).
+- `/nowplaying` — Rich embed with high-res artwork, live progress scrubber, and interactive playback buttons (`⏯️`, `⏭️`, `🔀`, `🔁`, `⏹️`, `❤️ Save to Crate`).
 - `/volume <1-100>` — Sets the playback volume dynamically (persisted and synced with Web Hub).
 - `/quality <auto | 128k | 192k | 320k>` — Switches streaming audio bitrate dynamically (persisted and synced with Web Hub).
 - `/shuffle` — Shuffles the server music queue (or re-rolls Deck 2 & Deck 3 AI autoplay tracks when the queue is empty).
 - `/loop <off | track | queue>` — Changes repeat loop mode (persisted and synced with Web Hub).
 - `/history` — Shows the last 10 tracks played in this server.
+- `/favorite [playlist]` — Saves the currently playing song to **❤️ My Crate** (`Favorites` by default, or any custom playlist name).
+- `/crate [action] [playlist]` — View, Play All, or Shuffle & Play any saved crate or custom playlist right in Discord.
 
 ### 🧠 AI DJ & Vibe Intelligence
 - `/dj [engine]` — Toggles Autoplay DJ or locks it to one of the 9 recommendation engines.

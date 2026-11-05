@@ -955,10 +955,12 @@ def create_web_app(bot: discord.Client) -> web.Application:
     app.router.add_get("/api/search", api_search)
     app.router.add_post("/api/guild/{guild_id}/play", api_play)
     app.router.add_get("/api/charts", api_charts)
-    from web.album_api import api_dna, api_discography, api_timemachine, api_radio
+    from web.album_api import api_dna, api_discography, api_timemachine, api_radio, api_crate
     app.router.add_get("/api/discography", api_discography)
     app.router.add_get("/api/album/tracks", api_album_tracks)
     app.router.add_get("/api/guild/{guild_id}/dna", api_dna)
+    app.router.add_get("/api/guild/{guild_id}/crate", api_crate)
+    app.router.add_post("/api/guild/{guild_id}/crate", api_crate)
     app.router.add_get("/api/logs", api_logs)
     app.router.add_post("/api/logs", api_logs)
     app.router.add_get("/api/timemachine", api_timemachine)

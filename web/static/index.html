@@ -126,8 +126,11 @@
         <button class="btn-icon" id="btnLoop" title="Cycle Loop Mode" onclick="sendControl('set_loop')">🔁</button>
       </div>
 
-      <!-- Vibe Training Feedback (Thumbs Up / Down) -->
-      <div class="vibe-feedback-row" style="display:flex; align-items:center; justify-content:center; gap:8px; margin: 8px 0;">
+      <!-- Vibe Training Feedback & Save to Crate -->
+      <div class="vibe-feedback-row" style="display:flex; align-items:center; justify-content:center; gap:6px; margin: 8px 0; flex-wrap:wrap;">
+        <button class="vibe-thumb-btn" id="btnSaveCrate" onclick="saveCurrentToCrate()" title="Save current song to My Crate (Favorites)" style="border-color:rgba(244,63,94,0.35); background:rgba(244,63,94,0.1);">
+          ❤️ <span style="font-size:0.75rem; font-weight:700; color:#fda4af;" id="btnSaveCrateText">Save</span>
+        </button>
         <button class="vibe-thumb-btn" id="btnThumbUp" onclick="sendTasteFeedback('up')" title="Thumbs Up: Train AI to play more like this artist">
           👍 <span style="font-size:0.75rem; font-weight:700;">Love Vibe</span>
         </button>
@@ -164,6 +167,7 @@
     <div class="card hub-deck">
       <div class="tabs-header">
         <button class="tab-btn active" onclick="switchTab('queue', this)"><span>📑 Queue</span> <span class="tab-badge" id="queueBadgeCount">0</span></button>
+        <button class="tab-btn" onclick="switchTab('crate', this)"><span>❤️ My Crate</span> <span class="tab-badge" id="crateBadgeCount">0</span></button>
         <button class="tab-btn" onclick="switchTab('history', this)"><span>🕒 History</span> <span class="tab-badge" id="historyBadgeCount">0</span></button>
         <button class="tab-btn" onclick="switchTab('brain', this)">🧠 Brain DJ</button>
         <button class="tab-btn" onclick="switchTab('search', this)">🔍 Search</button>
@@ -206,6 +210,36 @@
             <div class="empty-icon">📭</div>
             <div>The queue is currently empty.</div>
             <div style="font-size:0.8rem; color:var(--text-muted)">Use the Search tab or Trending Charts to add tracks!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- My Crate (Favorites & Custom Playlists) Tab -->
+      <div class="tab-content" id="tabCrate">
+        <div class="sub-nav-menu crate-playlists-nav" id="cratePlaylistsNav" style="margin-bottom:10px;">
+          <button class="sub-nav-pill active" onclick="selectCratePlaylist('Favorites')">❤️ Favorites (0)</button>
+        </div>
+
+        <div class="search-bar-wrap" style="margin-bottom:10px;">
+          <input type="text" class="search-input" id="newPlaylistInput" placeholder="Create a new custom playlist (e.g. Gym Anthems, 90s Hip-Hop, Club Hits)..." onkeydown="if(event.key==='Enter') createNewCratePlaylist()" />
+          <button class="btn-small" style="padding:0 14px;" onclick="createNewCratePlaylist()">➕ New Playlist</button>
+        </div>
+
+        <div class="queue-actions">
+          <span id="crateSummaryText" style="font-weight:700; color:var(--text-bright);">❤️ Favorites (0 saved songs)</span>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="btn-small" style="background:rgba(244,63,94,0.18); border-color:rgba(244,63,94,0.4); color:#fda4af;" onclick="saveCurrentToCrate()">❤️ Save Current Song</button>
+            <button class="btn-small" style="background:var(--accent-purple); color:#fff;" onclick="playCrateAll(false, true)">▶ Play All</button>
+            <button class="btn-small" onclick="playCrateAll(true, false)">🔀 Shuffle to Queue</button>
+            <button class="btn-small btn-danger" id="btnDeleteCratePlaylist" onclick="deleteActiveCratePlaylist()">🗑️ Clear</button>
+          </div>
+        </div>
+
+        <div class="track-list" id="crateTrackList">
+          <div class="empty-state">
+            <div class="empty-icon">❤️</div>
+            <div>Your crate is currently empty.</div>
+            <div style="font-size:0.8rem; color:var(--text-muted)">Click the ❤️ Save button on any playing song, search result, or history item!</div>
           </div>
         </div>
       </div>

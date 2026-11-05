@@ -303,6 +303,7 @@ function cycleLoopMode() {
     }
     if (tabId === "timemachine") loadTimeMachine();
     if (tabId === "radio") loadCloudRadio();
+    if (tabId === "crate") loadCrate(window.currentCratePlaylist || "Favorites");
   };
 
   // Sync soundwave visualizer & badges periodically
@@ -819,3 +820,166 @@ setInterval(() => {
     window.refreshMusicDna();
   }
 }, 12000);
+
+// ============================================================
+// ❤️ My Crate (Saved Favorites & Custom Playlists) Engine
+// ============================================================
+window.currentCratePlaylist = "Favorites";
+window.cachedCrateKeys = new Set();
+
+async function postCrateAction(payload) {
+  const guildId = getActiveGuildId();
+  if (!guildId) return null;
+  const res = await fetch(`/api/guild/${guildId}/crate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  return { ok: res.ok, data: await res.json() };
+}
+
+window.loadCrate = async function(playlistName = null) {
+  const guildId = getActiveGuildId();
+  if (!guildId) return;
+  if (playlistName) window.currentCratePlaylist = playlistName;
+  const pl = window.currentCratePlaylist || "Favorites";
+  try {
+    const res = await fetch(`/api/guild/${guildId}/crate?playlist=${encodeURIComponent(pl)}`);
+    if (res.ok) renderCrateUI(await res.json());
+  } catch (e) { console.warn("loadCrate error:", e); }
+};
+
+function renderCrateUI(data) {
+  if (!data) return;
+  const pl = data.playlist || window.currentCratePlaylist || "Favorites";
+  window.currentCratePlaylist = pl;
+  const playlists = data.playlists || [{ name: "Favorites", count: 0 }];
+  const tracks = data.tracks || [];
+  const badge = document.getElementById("crateBadgeCount");
+  if (badge) badge.innerText = data.total_count ?? tracks.length;
+
+  if (pl === "Favorites") {
+    window.cachedCrateKeys = new Set(tracks.map(t => `${(t.artist || '').toLowerCase().trim()}:::${(t.title || '').toLowerCase().trim()}`));
+    syncSaveCrateButtonState();
+  }
+
+  const nav = document.getElementById("cratePlaylistsNav");
+  if (nav) {
+    nav.innerHTML = playlists.map(p => {
+      const safeName = typeof escapeHtml === "function" ? escapeHtml(p.name) : p.name;
+      return `<button class="sub-nav-pill ${p.name === pl ? 'active' : ''}" onclick="selectCratePlaylist('${safeName.replace(/'/g, "\\'")}')">${p.name === "Favorites" ? "❤️" : "💿"} ${safeName} (${p.count || 0})</button>`;
+    }).join("");
+  }
+
+  const summary = document.getElementById("crateSummaryText");
+  if (summary) summary.innerText = `${pl === "Favorites" ? "❤️" : "💿"} ${pl} (${tracks.length} saved song${tracks.length === 1 ? "" : "s"})`;
+  const delBtn = document.getElementById("btnDeleteCratePlaylist");
+  if (delBtn) delBtn.innerText = pl === "Favorites" ? "🗑️ Clear Favorites" : "🗑️ Delete Playlist";
+
+  const list = document.getElementById("crateTrackList");
+  if (!list) return;
+  if (tracks.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">❤️</div><div>No saved tracks in "${typeof escapeHtml === "function" ? escapeHtml(pl) : pl}" yet.</div><div style="font-size:0.8rem; color:var(--text-muted)">Click the ❤️ Save button on the player deck, search results, or history to build your crate!</div></div>`;
+    return;
+  }
+
+  const placeholder = typeof ALBUM_PLACEHOLDER_SVG !== "undefined" ? ALBUM_PLACEHOLDER_SVG : "";
+  list.innerHTML = tracks.map((t, idx) => {
+    const safeKey = (t.track_key || `${(t.artist || '').toLowerCase()}:::${(t.title || '').toLowerCase()}`).replace(/'/g, "\\'");
+    const payload = JSON.stringify(t).replace(/'/g, "&#39;");
+    return `<div class="track-item">
+      <span style="font-weight:700; color:#fda4af; font-size:0.8rem; width:24px;">#${idx + 1}</span>
+      <img class="track-thumb" src="${t.cover || placeholder}" onerror="this.onerror=null; this.src='${placeholder}';" />
+      <div class="track-info-col">
+        <span class="item-title">${typeof escapeHtml === "function" ? escapeHtml(t.title) : t.title}</span>
+        <span class="item-artist">${typeof escapeHtml === "function" ? escapeHtml(t.artist) : t.artist} • ${t.duration || '--:--'} • <span class="tag-badge">${(t.source || 'SAVED').toUpperCase()}</span></span>
+      </div>
+      <div class="track-action-btns">
+        <button class="btn-small" title="Play Now" onclick='queueTrackDirect(${payload}, true)'>▶ Play</button>
+        <button class="btn-small" title="Add to Queue" onclick='queueTrackDirect(${payload}, false)'>+ Queue</button>
+        <button class="btn-small btn-danger" title="Remove from Crate" onclick="removeCrateTrack('${safeKey}')">✕</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function syncSaveCrateButtonState() {
+  const btnTxt = document.getElementById("btnSaveCrateText");
+  const titleEl = document.getElementById("trackTitle");
+  const artistEl = document.getElementById("trackArtist");
+  if (!btnTxt || !titleEl || !artistEl) return;
+  const key = `${artistEl.innerText.trim().toLowerCase()}:::${titleEl.innerText.trim().toLowerCase()}`;
+  btnTxt.innerText = (window.cachedCrateKeys && window.cachedCrateKeys.has(key)) ? "Saved" : "Save";
+}
+
+window.selectCratePlaylist = function(name) { window.currentCratePlaylist = name || "Favorites"; loadCrate(window.currentCratePlaylist); };
+
+window.saveCurrentToCrate = async function() {
+  const titleEl = document.getElementById("trackTitle"), artistEl = document.getElementById("trackArtist"), coverEl = document.getElementById("trackCover");
+  const title = titleEl ? titleEl.innerText.trim() : "", artist = artistEl ? artistEl.innerText.trim() : "";
+  if (!title || title === "Nothing Playing" || title === "Skipping...") {
+    if (typeof showToast === "function") showToast("No active track playing to save", "⚠️");
+    return;
+  }
+  await saveTrackToCrate({
+    title, artist, cover: (coverEl && coverEl.style.display !== "none") ? coverEl.src : "",
+    duration_seconds: typeof localTotal !== "undefined" ? localTotal : 0,
+    duration: typeof formatTime === "function" && typeof localTotal !== "undefined" ? formatTime(localTotal) : ""
+  });
+};
+
+window.saveTrackToCrate = async function(trackObj, targetPlaylist = null) {
+  if (!trackObj) return;
+  const pl = targetPlaylist || window.currentCratePlaylist || "Favorites";
+  try {
+    const res = await postCrateAction({ action: "add", playlist: pl, track: trackObj });
+    if (res && res.ok) {
+      renderCrateUI(res.data);
+      if (typeof showToast === "function") showToast(res.data.added ? `❤️ Saved "${trackObj.title}" to ${pl}!` : `❤️ Already in ${pl}`, "❤️");
+    }
+  } catch (e) { if (typeof showToast === "function") showToast("Failed to save track", "❌"); }
+};
+
+window.removeCrateTrack = async function(trackKey) {
+  const pl = window.currentCratePlaylist || "Favorites";
+  try {
+    const res = await postCrateAction({ action: "remove", playlist: pl, track_key: trackKey });
+    if (res && res.ok) { renderCrateUI(res.data); if (typeof showToast === "function") showToast("Removed from " + pl, "🗑️"); }
+  } catch (e) {}
+};
+
+window.createNewCratePlaylist = async function() {
+  const input = document.getElementById("newPlaylistInput");
+  const name = (input ? input.value : "").trim();
+  if (!name) { if (typeof showToast === "function") showToast("Enter a playlist name first", "⚠️"); return; }
+  input.value = "";
+  try {
+    const res = await postCrateAction({ action: "create_playlist", playlist: name });
+    if (res && res.ok) { renderCrateUI(res.data); if (typeof showToast === "function") showToast(`💿 Created playlist: ${name}`, "✨"); }
+  } catch (e) {}
+};
+
+window.deleteActiveCratePlaylist = async function() {
+  const pl = window.currentCratePlaylist || "Favorites";
+  if (!confirm(pl === "Favorites" ? "Clear all saved songs in Favorites?" : `Delete custom playlist "${pl}" and its saved songs?`)) return;
+  try {
+    const res = await postCrateAction({ action: "delete_playlist", playlist: pl });
+    if (res && res.ok) { renderCrateUI(res.data); if (typeof showToast === "function") showToast(pl === "Favorites" ? "Favorites cleared" : `Deleted playlist "${pl}"`, "🗑️"); }
+  } catch (e) {}
+};
+
+window.playCrateAll = async function(shuffle = false, playNow = false) {
+  const pl = window.currentCratePlaylist || "Favorites";
+  try {
+    const res = await postCrateAction({ action: "play_all", playlist: pl, shuffle, play_now: playNow });
+    if (res && res.ok) {
+      if (typeof showToast === "function") showToast(`${shuffle ? "🔀 Shuffled" : "▶️ Queued"} ${res.data.enqueued_count} tracks from ${pl}!`, "❤️");
+      if (typeof pollGuildState === "function") pollGuildState(getActiveGuildId());
+    } else if (res && typeof showToast === "function") {
+      showToast(res.data.error || "Playlist is empty", "⚠️");
+    }
+  } catch (e) { if (typeof showToast === "function") showToast("Failed to play crate", "❌"); }
+};
+
+setTimeout(() => { if (typeof window.loadCrate === "function") window.loadCrate("Favorites"); }, 1500);
+setInterval(() => { syncSaveCrateButtonState(); }, 1500);

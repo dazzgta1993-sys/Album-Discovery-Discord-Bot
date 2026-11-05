@@ -180,3 +180,134 @@ async def api_radio(request: web.Request) -> web.Response:
         return web.json_response({"stations": stations})
     except Exception as e:
         return web.json_response({"stations": [], "error": str(e)})
+
+
+async def api_crate(request: web.Request) -> web.Response:
+    """GET or POST handler for ❤️ My Crate (Saved Favorites & Custom Playlists)."""
+    import random
+    from app import store
+    from core.player import AudioTrack
+
+    bot = request.app["bot"]
+    guild_id = request.match_info.get("guild_id", "")
+    try:
+        gid = int(guild_id)
+    except (ValueError, TypeError):
+        return web.json_response({"error": "Invalid guild id"}, status=400)
+
+    guild = bot.get_guild(gid)
+    player = bot.player_manager.get_player(guild) if guild else None
+
+    if request.method == "GET":
+        playlist = request.query.get("playlist", "Favorites").strip() or "Favorites"
+        pl_meta = store.get_crate_playlists(str(gid))
+        tracks = store.get_crate_tracks(str(gid), playlist)
+        return web.json_response({
+            "playlist": playlist,
+            "playlists": pl_meta.get("playlists", []),
+            "total_count": pl_meta.get("total_count", 0),
+            "tracks": tracks
+        })
+
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+
+    action = str(data.get("action", "add")).lower().strip()
+    playlist = str(data.get("playlist", "Favorites")).strip()[:60] or "Favorites"
+
+    if action == "add":
+        track_payload = data.get("track")
+        if not track_payload and player and player.current_track:
+            t = player.current_track
+            track_payload = {
+                "title": t.title, "artist": t.artist, "album": t.album,
+                "duration": t.duration_str, "duration_seconds": t.duration_seconds,
+                "cover": t.cover_url, "video_id": t.video_id, "source": getattr(t, "source", "deezer")
+            }
+        if not track_payload:
+            return web.json_response({"error": "No track playing or specified"}, status=400)
+        res = store.add_to_crate(str(gid), track_payload, playlist_name=playlist)
+        if player and track_payload.get("artist"):
+            player.handle_feedback(track_payload.get("artist", ""), track_payload.get("title", ""), "up")
+        pl_meta = store.get_crate_playlists(str(gid))
+        return web.json_response({
+            "status": "ok",
+            "added": res.get("added", False),
+            "playlist": playlist,
+            "count": res.get("count", 0),
+            "total_count": pl_meta.get("total_count", 0),
+            "playlists": pl_meta.get("playlists", []),
+            "tracks": store.get_crate_tracks(str(gid), playlist)
+        })
+
+    elif action == "remove":
+        track_key = data.get("track_key", "")
+        store.remove_from_crate(str(gid), track_key, playlist_name=playlist)
+        pl_meta = store.get_crate_playlists(str(gid))
+        return web.json_response({
+            "status": "ok",
+            "playlist": playlist,
+            "total_count": pl_meta.get("total_count", 0),
+            "playlists": pl_meta.get("playlists", []),
+            "tracks": store.get_crate_tracks(str(gid), playlist)
+        })
+
+    elif action == "create_playlist":
+        pl_meta = store.create_crate_playlist(str(gid), playlist)
+        return web.json_response({
+            "status": "ok",
+            "playlist": playlist,
+            "total_count": pl_meta.get("total_count", 0),
+            "playlists": pl_meta.get("playlists", []),
+            "tracks": store.get_crate_tracks(str(gid), playlist)
+        })
+
+    elif action == "delete_playlist":
+        pl_meta = store.delete_crate_playlist(str(gid), playlist)
+        next_pl = "Favorites"
+        return web.json_response({
+            "status": "ok",
+            "playlist": next_pl,
+            "total_count": pl_meta.get("total_count", 0),
+            "playlists": pl_meta.get("playlists", []),
+            "tracks": store.get_crate_tracks(str(gid), next_pl)
+        })
+
+    elif action == "play_all":
+        if not guild or not player:
+            return web.json_response({"error": "Guild player not available"}, status=404)
+        tracks = store.get_crate_tracks(str(gid), playlist)
+        if not tracks:
+            return web.json_response({"error": f"Playlist '{playlist}' is empty"}, status=400)
+        if not player.is_connected:
+            target_vc = next((vc for vc in guild.voice_channels if any(not m.bot for m in vc.members)), guild.voice_channels[0] if guild.voice_channels else None)
+            if target_vc:
+                try:
+                    await player.connect(target_vc)
+                except Exception:
+                    pass
+        work = list(tracks)
+        if data.get("shuffle"):
+            random.shuffle(work)
+        play_now = bool(data.get("play_now", False))
+        q_tracks = [
+            AudioTrack(
+                title=t.get("title", "Unknown"), artist=t.get("artist", "Unknown"),
+                album=t.get("album", ""), duration_seconds=int(t.get("duration_seconds") or 0),
+                duration_str=t.get("duration") or "", cover_url=t.get("cover") or "",
+                video_id=t.get("video_id"), requested_by=f"My Crate ❤️ ({playlist})",
+                source=t.get("source", "deezer")
+            )
+            for t in work
+        ]
+        was_playing = player.is_playing
+        total = player.enqueue_many(q_tracks, at_front=play_now)
+        if play_now and was_playing:
+            player.skip()
+        elif not was_playing:
+            asyncio.create_task(player.play_next())
+        return web.json_response({"status": "ok", "enqueued_count": len(q_tracks), "total": total})
+
+    return web.json_response({"error": f"Unknown crate action: {action}"}, status=400)

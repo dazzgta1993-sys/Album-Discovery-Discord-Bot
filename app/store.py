@@ -91,12 +91,33 @@ def init_db():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_itunes ON album_catalog(itunes_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_artist ON album_catalog(artist)")
 
-                # 7. Guild Persistent Settings (Brain & Autoplay configuration)
+        # 7. Guild Persistent Settings (Brain & Autoplay configuration)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS guild_settings (
                 guild_id TEXT PRIMARY KEY,
                 settings_json TEXT NOT NULL,
                 updated_at REAL NOT NULL
+            )
+        """)
+
+        # 8. Saved Crate (Favorites & Custom Playlists)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS saved_crate (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT NOT NULL,
+                playlist_name TEXT NOT NULL DEFAULT 'Favorites',
+                track_key TEXT NOT NULL,
+                track_json TEXT NOT NULL,
+                added_at REAL NOT NULL,
+                UNIQUE(guild_id, playlist_name, track_key)
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS crate_playlists (
+                guild_id TEXT NOT NULL,
+                playlist_name TEXT NOT NULL,
+                created_at REAL NOT NULL,
+                PRIMARY KEY(guild_id, playlist_name)
             )
         """)
 
@@ -510,6 +531,152 @@ def clear_playback_history(guild_id: str):
             conn.commit()
     except Exception as exc:
         _log.warning(f"clear_playback_history error: {exc}")
+
+
+# -------------------------------------------------------------
+# SAVED CRATE (FAVORITES & CUSTOM PLAYLISTS)
+# -------------------------------------------------------------
+
+def _make_crate_key(artist: str, title: str) -> str:
+    return f"{str(artist or 'unknown').strip().lower()}:::{str(title or 'unknown').strip().lower()}"
+
+
+def add_to_crate(guild_id: str, track_data: dict, playlist_name: str = "Favorites") -> dict:
+    """Save a track to a guild's Favorites or custom playlist."""
+    gid = str(guild_id or "").strip()
+    pl_name = str(playlist_name or "Favorites").strip()[:60] or "Favorites"
+    if not gid or not track_data:
+        return {"added": False, "playlist": pl_name, "count": 0}
+    t_key = _make_crate_key(track_data.get("artist", ""), track_data.get("title", ""))
+    now = time.time()
+    payload = {
+        "title": track_data.get("title", "Unknown"),
+        "artist": track_data.get("artist", "Unknown"),
+        "album": track_data.get("album", ""),
+        "duration": track_data.get("duration") or "",
+        "duration_seconds": int(track_data.get("duration_seconds") or 0),
+        "cover": track_data.get("cover") or track_data.get("cover_url") or "",
+        "video_id": track_data.get("video_id"),
+        "source": track_data.get("source") or "deezer",
+        "track_key": t_key,
+        "added_at": now
+    }
+    added = False
+    try:
+        with _lock, _get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR IGNORE INTO crate_playlists (guild_id, playlist_name, created_at) VALUES (?, ?, ?)", (gid, pl_name, now))
+            cursor.execute("""
+                INSERT OR IGNORE INTO saved_crate (guild_id, playlist_name, track_key, track_json, added_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (gid, pl_name, t_key, json.dumps(payload), now))
+            added = cursor.rowcount > 0
+            conn.commit()
+    except Exception as exc:
+        _log.warning(f"add_to_crate error: {exc}")
+    tracks = get_crate_tracks(gid, pl_name)
+    return {"added": added, "playlist": pl_name, "count": len(tracks), "track_key": t_key}
+
+
+def remove_from_crate(guild_id: str, track_key: str, playlist_name: str = "Favorites") -> bool:
+    """Remove a track from a guild's playlist by track_key."""
+    gid = str(guild_id or "").strip()
+    pl_name = str(playlist_name or "Favorites").strip() or "Favorites"
+    if not gid or not track_key:
+        return False
+    try:
+        with _lock, _get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM saved_crate WHERE guild_id = ? AND playlist_name = ? AND track_key = ?", (gid, pl_name, str(track_key)))
+            conn.commit()
+            return cursor.rowcount > 0
+    except Exception as exc:
+        _log.warning(f"remove_from_crate error: {exc}")
+        return False
+
+
+def get_crate_tracks(guild_id: str, playlist_name: str = "Favorites") -> list[dict]:
+    """Return all saved tracks in a guild's playlist (newest first)."""
+    gid = str(guild_id or "").strip()
+    pl_name = str(playlist_name or "Favorites").strip() or "Favorites"
+    if not gid:
+        return []
+    try:
+        with _lock, _get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT track_key, track_json FROM saved_crate
+                WHERE guild_id = ? AND playlist_name = ?
+                ORDER BY id DESC
+            """, (gid, pl_name))
+            out = []
+            for r in cursor.fetchall():
+                try:
+                    d = json.loads(r["track_json"])
+                    d["track_key"] = r["track_key"]
+                    out.append(d)
+                except Exception:
+                    pass
+            return out
+    except Exception as exc:
+        _log.warning(f"get_crate_tracks error: {exc}")
+        return []
+
+
+def get_crate_playlists(guild_id: str) -> dict:
+    """Return all playlists with track counts and total saved tracks for a guild."""
+    gid = str(guild_id or "").strip()
+    if not gid:
+        return {"playlists": [{"name": "Favorites", "count": 0}], "total_count": 0}
+    try:
+        with _lock, _get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR IGNORE INTO crate_playlists (guild_id, playlist_name, created_at) VALUES (?, 'Favorites', ?)", (gid, time.time()))
+            conn.commit()
+            cursor.execute("SELECT playlist_name FROM crate_playlists WHERE guild_id = ? ORDER BY CASE WHEN playlist_name = 'Favorites' THEN 0 ELSE 1 END, created_at ASC", (gid,))
+            names = [r["playlist_name"] for r in cursor.fetchall()]
+            cursor.execute("SELECT playlist_name, COUNT(*) as cnt FROM saved_crate WHERE guild_id = ? GROUP BY playlist_name", (gid,))
+            counts = {r["playlist_name"]: int(r["cnt"]) for r in cursor.fetchall()}
+            for p_name in counts:
+                if p_name not in names:
+                    names.append(p_name)
+            if "Favorites" not in names:
+                names.insert(0, "Favorites")
+            playlists = [{"name": n, "count": counts.get(n, 0)} for n in names]
+            return {"playlists": playlists, "total_count": sum(counts.values())}
+    except Exception as exc:
+        _log.warning(f"get_crate_playlists error: {exc}")
+        return {"playlists": [{"name": "Favorites", "count": 0}], "total_count": 0}
+
+
+def create_crate_playlist(guild_id: str, playlist_name: str) -> dict:
+    """Create a custom named playlist in the guild's crate."""
+    gid = str(guild_id or "").strip()
+    pl_name = str(playlist_name or "").strip()[:60]
+    if gid and pl_name:
+        try:
+            with _lock, _get_connection() as conn:
+                conn.execute("INSERT OR IGNORE INTO crate_playlists (guild_id, playlist_name, created_at) VALUES (?, ?, ?)", (gid, pl_name, time.time()))
+                conn.commit()
+        except Exception as exc:
+            _log.warning(f"create_crate_playlist error: {exc}")
+    return get_crate_playlists(gid)
+
+
+def delete_crate_playlist(guild_id: str, playlist_name: str) -> dict:
+    """Delete a custom playlist or clear 'Favorites' if playlist_name is 'Favorites'."""
+    gid = str(guild_id or "").strip()
+    pl_name = str(playlist_name or "Favorites").strip()
+    if gid and pl_name:
+        try:
+            with _lock, _get_connection() as conn:
+                conn.execute("DELETE FROM saved_crate WHERE guild_id = ? AND playlist_name = ?", (gid, pl_name))
+                if pl_name != "Favorites":
+                    conn.execute("DELETE FROM crate_playlists WHERE guild_id = ? AND playlist_name = ?", (gid, pl_name))
+                conn.commit()
+        except Exception as exc:
+            _log.warning(f"delete_crate_playlist error: {exc}")
+    return get_crate_playlists(gid)
 
 
 try:

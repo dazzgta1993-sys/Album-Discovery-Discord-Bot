@@ -243,7 +243,7 @@ with adaptive split-screen & mobile layouts (zero header overlap):
      clean studio audio matching.
 
 ===============================================================================
-4. DISCORD SLASH COMMANDS (23 Active Commands)
+4. DISCORD SLASH COMMANDS (25 Active Commands)
 ===============================================================================
 
 Playback & Audio Controls:
@@ -254,12 +254,14 @@ Playback & Audio Controls:
 - /resume                       : Resumes paused playback.
 - /stop                         : Stops playback, clears queue, and disconnects from voice.
 - /queue                        : Displays paginated queue with runtime stats.
-- /nowplaying                   : Displays rich embed with interactive control buttons.
+- /nowplaying                   : Displays rich embed with interactive control buttons (including ❤️ Save to Crate).
 - /volume <1-100>               : Sets volume percentage in real time (synced with Web Hub).
 - /quality <auto|128k|192k|320k>: Switches streaming bitrate dynamically (synced with Web Hub).
 - /shuffle                      : Shuffles the queue (or re-rolls Deck 2 & Deck 3 AI tracks).
 - /loop <off|track|queue>       : Sets loop repeat mode (synced with Web Hub).
 - /history                      : Shows the last 10 tracks played in this server.
+- /favorite [playlist]          : Saves the currently playing track to My Crate (Favorites or custom playlist).
+- /crate [action] [playlist]    : View, Play All, or Shuffle & Play your saved Favorites or custom playlists.
 
 AI DJ & Vibe Intelligence:
 - /dj [engine]                  : Toggles Autoplay DJ or locks it to one of the 9 engines.

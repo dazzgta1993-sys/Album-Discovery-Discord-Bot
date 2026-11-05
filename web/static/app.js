@@ -499,6 +499,7 @@ function renderHistory(history) {
 <div class="track-info-col"> <span class="item-title">${escapeHtml(t.title)}</span>
 <span class="item-artist">${escapeHtml(t.artist)} • ${t.duration || '--:--'} • <span class="tag-badge">${(t.source || 'PLAYED').toUpperCase()}</span></span>
 </div> <div class="track-action-btns">
+<button class="btn-small" title="Save to My Crate" onclick='saveTrackToCrate(${JSON.stringify(t).replace(/'/g, "&#39;")})'>❤️</button>
 <button class="btn-small" title="Replay Now" onclick='queueTrackDirect(${JSON.stringify(t).replace(/'/g, "&#39;")}, true)'>▶ Replay</button>
 <button class="btn-small" title="Queue Again" onclick='queueTrackDirect(${JSON.stringify(t).replace(/'/g, "&#39;")}, false)'>+ Queue</button>
 </div> </div> `).join('');
@@ -728,6 +729,7 @@ async function executeSearch() {
 <div class="track-info-col"> <span class="item-title">${escapeHtml(r.title)}</span>
 <span class="item-artist">${escapeHtml(r.artist)} • ${r.duration} • <span class="tag-badge">${r.source.toUpperCase()}</span></span>
 </div> <div class="track-action-btns">
+<button class="btn-small" title="Save to My Crate" onclick='saveTrackToCrate(${JSON.stringify(r).replace(/\'/g, "&#39;")})'>❤️</button>
 <button class="btn-small" onclick='queueTrackDirect(${JSON.stringify(r).replace(/\'/g, "&#39;")}, true)'>▶ Play Now</button>
 <button class="btn-small" onclick='queueTrackDirect(${JSON.stringify(r).replace(/\'/g, "&#39;")}, false)'>+ Queue</button> </div>
 </div> `;

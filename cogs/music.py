@@ -780,6 +780,101 @@ class MusicCog(commands.Cog, name="Music"):
         embed.set_footer(text="Configure anytime via /dj [engine] or at http://localhost:8905")
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+    @app_commands.command(name="favorite", description="Save the currently playing song to My Crate (Favorites or custom playlist)")
+    @app_commands.describe(playlist="Playlist name in My Crate (default: Favorites)")
+    async def favorite(self, interaction: discord.Interaction, playlist: str = "Favorites"):
+        player = self.bot.player_manager.get_player(interaction.guild)
+        t = player.current_track or (player.history[-1] if player.history else None)
+        if not t:
+            await interaction.response.send_message("❌ No active or recently played track to save.", ephemeral=True)
+            return
+        from app import store
+        pl_name = (playlist or "Favorites").strip()[:60] or "Favorites"
+        res = store.add_to_crate(str(interaction.guild.id), {
+            "title": t.title, "artist": t.artist, "album": t.album,
+            "duration": t.duration_str, "duration_seconds": t.duration_seconds,
+            "cover": t.cover_url, "video_id": t.video_id, "source": getattr(t, "source", "deezer")
+        }, playlist_name=pl_name)
+        player.handle_feedback(t.artist, t.title, "up")
+        if res.get("added"):
+            await interaction.response.send_message(f"❤️ Saved **{t.artist} — {t.title}** to **My Crate ({pl_name})**! ({res.get('count', 1)} tracks)", delete_after=5.0)
+        else:
+            await interaction.response.send_message(f"❤️ **{t.artist} — {t.title}** is already in **My Crate ({pl_name})**!", ephemeral=True)
+
+    @app_commands.command(name="crate", description="View, play, or shuffle your saved Favorites & custom playlists in My Crate")
+    @app_commands.describe(
+        action="View your crate, play in order, or shuffle & play",
+        playlist="Playlist name in My Crate (default: Favorites)"
+    )
+    @app_commands.choices(action=[
+        app_commands.Choice(name="📋 View Saved Crate", value="view"),
+        app_commands.Choice(name="▶️ Play & Queue Crate", value="play"),
+        app_commands.Choice(name="🔀 Shuffle & Play Crate", value="shuffle"),
+    ])
+    async def crate(self, interaction: discord.Interaction, action: app_commands.Choice[str] = None, playlist: str = "Favorites"):
+        from app import store
+        import random
+        act = action.value if action else "view"
+        pl_name = (playlist or "Favorites").strip() or "Favorites"
+        tracks = store.get_crate_tracks(str(interaction.guild.id), pl_name)
+        if not tracks:
+            await interaction.response.send_message(f"📭 Your crate **{pl_name}** is currently empty. Use `/favorite` or the ❤️ button to save songs!", ephemeral=True)
+            return
+
+        if act == "view":
+            pl_info = store.get_crate_playlists(str(interaction.guild.id))
+            all_pls = ", ".join(f"{p['name']} ({p['count']})" for p in pl_info.get("playlists", []))
+            lines = [f"`#{i}` **{t.get('artist')} — {t.get('title')}** ({t.get('duration') or '--:--'})" for i, t in enumerate(tracks[:15], 1)]
+            if len(tracks) > 15:
+                lines.append(f"*...and {len(tracks) - 15} more saved tracks*")
+            embed = discord.Embed(
+                title=f"❤️ My Crate — {pl_name} ({len(tracks)} tracks)",
+                description="\n".join(lines),
+                color=EMBED_COLOR
+            )
+            embed.set_footer(text=f"Playlists: {all_pls} • Manage at http://localhost:8905")
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+
+        try:
+            if not interaction.response.is_done():
+                await interaction.response.defer()
+        except Exception:
+            pass
+        if not await self._ensure_voice(interaction):
+            return
+
+        player = self.bot.player_manager.get_player(interaction.guild)
+        player.text_channel = interaction.channel
+        work_list = list(tracks)
+        if act == "shuffle":
+            random.shuffle(work_list)
+
+        q_tracks = [
+            AudioTrack(
+                title=t.get("title", "Unknown"), artist=t.get("artist", "Unknown"),
+                album=t.get("album", ""), duration_seconds=int(t.get("duration_seconds") or 0),
+                duration_str=t.get("duration") or "", cover_url=t.get("cover") or "",
+                video_id=t.get("video_id"), requested_by=f"{interaction.user.display_name} (❤️ {pl_name})",
+                source=t.get("source", "deezer")
+            )
+            for t in work_list
+        ]
+        was_playing = player.is_playing
+        total = player.enqueue_many(q_tracks)
+        mode_lbl = "Shuffled & Queued" if act == "shuffle" else "Queued"
+        embed = discord.Embed(
+            title=f"❤️ My Crate {mode_lbl}: {pl_name}",
+            description=f"Added **{len(q_tracks)} saved tracks** to the queue!\nFirst up: **{q_tracks[0].artist} — {q_tracks[0].title}**",
+            color=EMBED_COLOR
+        )
+        if q_tracks[0].cover_url:
+            embed.set_thumbnail(url=q_tracks[0].cover_url)
+        embed.set_footer(text=f"Total in queue: {total}")
+        await self._send_notice(interaction, embed=embed, delay=4.5)
+        if not was_playing:
+            asyncio.create_task(player.play_next())
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(MusicCog(bot))

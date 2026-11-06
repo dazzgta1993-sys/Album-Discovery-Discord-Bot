@@ -765,13 +765,20 @@ async def api_play(request: web.Request) -> web.Response:
 
     query = data.get("query")
     if query and not data.get("title"):
-        found = await asyncio.to_thread(deezer_api.search_tracks, query, limit=1)
+        found = await asyncio.to_thread(deezer_api.search_tracks, query, limit=6)
         if found:
-            data["title"] = found[0].get("title", query)
-            data["artist"] = found[0].get("artist", "Unknown Artist")
-            data["album"] = found[0].get("album", "")
-            data["cover"] = found[0].get("cover_xl") or found[0].get("cover") or ""
-            data["duration_seconds"] = int(found[0].get("duration", 0))
+            chosen = found[0]
+            if "live" not in query.lower():
+                for cand in found:
+                    c_tit = (cand.get("title") or "").lower()
+                    if not any(k in c_tit for k in ("(live", "[live", "live at", "live from", "session", "tribute")):
+                        chosen = cand
+                        break
+            data["title"] = chosen.get("title", query)
+            data["artist"] = chosen.get("artist", "Unknown Artist")
+            data["album"] = chosen.get("album", "")
+            data["cover"] = chosen.get("cover_xl") or chosen.get("cover") or ""
+            data["duration_seconds"] = int(chosen.get("duration", 0))
         else:
             data["title"] = query
             data["artist"] = "Direct Query" 

@@ -6,13 +6,13 @@ import sys
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug(f'Bot notice: {_ex}')
 if sys.stderr and hasattr(sys.stderr, "reconfigure"):
     try:
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
+    except Exception as _ex:
+        log.debug(f'Bot notice: {_ex}')
 
 import discord
 from discord.ext import commands
@@ -35,8 +35,8 @@ if not opus.is_loaded():
             try:
                 opus.load_opus(c)
                 break
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug(f'Bot notice: {_ex}')
 
 from core.config import BOT_TOKEN, COMMAND_PREFIX, WEB_ENABLED, WEB_HOST, WEB_PORT
 from core.logger import get_bot_logger, configure_discord_logging
@@ -135,6 +135,10 @@ class AlbumDiscoveryBot(commands.Bot):
                             await player.disconnect()
                         else:
                             log.info(f"[{guild.name}] Voice channel is empty, but playback/autoplay is active. Web audio preserved.")
+
+    async def on_guild_remove(self, guild: discord.Guild):
+        log.info(f"Removed from guild {guild.name} ({guild.id}). Cleaning up player state.")
+        await self.player_manager.remove_player(guild.id)
 
     async def close(self):
         if self._web_runner:

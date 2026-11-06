@@ -125,12 +125,68 @@ async def api_dna(request: web.Request) -> web.Response:
 
 @web.middleware
 async def static_cache_control_middleware(request: web.Request, handler):
+    import os
+    from urllib.parse import urlparse
+    if request.path.startswith("/api/"):
+        # 1. Local network / optional API token security guard
+        api_key = os.getenv("WEB_API_KEY", "").strip()
+        remote_ip = (request.remote or "").strip()
+        is_local = remote_ip in ("127.0.0.1", "::1", "localhost") or remote_ip.startswith(("192.168.", "10.", "172."))
+        if api_key:
+            req_key = request.headers.get("X-API-Key") or request.query.get("api_key") or ""
+            if req_key != api_key and not is_local:
+                return web.json_response({"error": "Unauthorized: valid API key required"}, status=401)
+        elif not is_local:
+            return web.json_response({"error": "Forbidden: Web Control Hub is restricted to local access"}, status=403)
+        # 2. CSRF / Origin validation on state-mutating requests
+        if request.method in ("POST", "PUT", "DELETE"):
+            origin = request.headers.get("Origin", "").strip()
+            if origin:
+                parsed_origin = urlparse(origin)
+                req_host = (request.host or "").split(":")[0].lower()
+                orig_host = (parsed_origin.hostname or "").lower()
+                if orig_host not in (req_host, "localhost", "127.0.0.1", "::1"):
+                    return web.json_response({"error": "Forbidden: cross-origin state mutation blocked"}, status=403)
     response = await handler(request)
     if request.path.startswith("/static/") or request.path == "/":
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
     return response
+
+
+def handle_logs_io_sync(file_map: dict, method: str, log_type: str):
+    import os
+    if method == "POST":
+        for p in file_map.values():
+            if os.path.exists(p):
+                try:
+                    with open(p, "w", encoding="utf-8") as f:
+                        f.truncate(0)
+                except Exception as e:
+                    log.debug(f"Log truncate notice for {p}: {e}")
+        return {"status": "ok", "cleared": True}
+    lines = []
+    if log_type in file_map:
+        target_path = file_map[log_type]
+        if os.path.exists(target_path):
+            try:
+                with open(target_path, "r", encoding="utf-8", errors="replace") as f:
+                    lines = [l.strip() for l in f.readlines()[-80:] if l.strip()]
+            except Exception as e:
+                log.debug(f"Log read notice for {target_path}: {e}")
+    else:
+        merged = []
+        for p in file_map.values():
+            if os.path.exists(p):
+                try:
+                    with open(p, "r", encoding="utf-8", errors="replace") as f:
+                        merged.extend([l.strip() for l in f.readlines()[-60:] if l.strip()])
+                except Exception as e:
+                    log.debug(f"Log merge notice for {p}: {e}")
+        merged.sort()
+        lines = merged[-80:]
+    return {"logs": lines, "type": log_type}
 
 
 
@@ -286,8 +342,8 @@ async def api_crate(request: web.Request) -> web.Response:
             if target_vc:
                 try:
                     await player.connect(target_vc)
-                except Exception:
-                    pass
+                except Exception as e:
+                    log.debug(f'Crate voice connect notice: {e}')
         work = list(tracks)
         if data.get("shuffle"):
             random.shuffle(work)

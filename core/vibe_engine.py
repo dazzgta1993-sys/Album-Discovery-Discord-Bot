@@ -143,8 +143,8 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     album="Charts",
                     duration_seconds=0
                 )
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
     if not effective_track:
         return None
 

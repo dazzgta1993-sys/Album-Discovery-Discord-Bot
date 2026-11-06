@@ -2,9 +2,9 @@
 
 A broadcast-grade, standalone Discord music bot and real-time studio control center powered by the **Album Discovery** engine:
 
-- 🎛️ **Triple-Deck Pipeline Preloader:** Zero-gap transitions (<50ms) with Deck 2 Standby Prewarming and Deck 3 harmonic 2-step lookahead.
-- 🧠 **Autonomous Vibe Discovery Matrix:** Self-driving intelligent autoplay with 4 exploration modes, anchor locking, artist cooldown shields, era filters, and 8D/Nightcore spam shields.
-- 🧬 **Real-Time Music DNA & Acoustic Visualizer:** Live Energy, Danceability, Electronic/Acoustic ratios, and 100% dynamic public taxonomy resolution across 10 genres & 30+ subgenres.
+- 🎛️ **Triple-Deck Pipeline Preloader:** Fast track transitions by pre-resolving Deck 2 direct stream URLs and Deck 3 2-step lookahead metadata in the background.
+- 🧠 **Multi-Platform Vibe Discovery Matrix:** Curated & taste-scored autoplay across Deezer Artist Radio and YouTube Music with 4 exploration modes, anchor locking, artist cooldowns, era filters, and spam shields.
+- 🧬 **Session Music DNA & Taxonomy Visualizer:** Heuristic Energy, Danceability, Electronic/Acoustic estimates, and dynamic public taxonomy resolution (MusicBrainz/Deezer) across 10 genres & 30+ subgenres.
 - 🎙️ **Discord Voice Channel Status Synchronization:** Automatically updates Discord's native voice channel status to the currently playing song (`🎶 Artist - Title`) without text chat spam.
 - 🌐 **Web Control Hub (`localhost:8905`):** Responsive desktop & split-screen browser studio with live animated soundwave visualizer, low-latency browser audio monitoring, queue reordering, 1-click Clear History & Clear Logs actions, and full 2-way synchronization with Discord & SQLite.
 - 📻 **Unified 9-Platform Streaming Ecosystem:** High-fidelity Opus 48kHz audio spanning Deezer Studio Masters, YouTube Music, YouTube Live/Concerts, Spotify catalog match, Apple Music / iTunes high-res covers, SoundCloud DJ sets, MusicBrainz taxonomy archives, and live Official UK/US Billboard charts.
@@ -17,12 +17,12 @@ A broadcast-grade, standalone Discord music bot and real-time studio control cen
 
 Say goodbye to awkward 2–3 second loading pauses and rapid-skip crashes:
 - **Deck 1 (Active Playback):** Precision decoded 48kHz 16-bit PCM streaming.
-- **Deck 2 (Standby Preloader):** Pre-resolves and buffers the next track's direct stream URL in the background for **<50ms instant zero-gap drop**.
-- **Deck 3 (Pipeline Lookahead):** Cues and harmonic-checks two tracks ahead, ensuring continuous non-stop progression.
+- **Deck 2 (Standby Preloader):** Pre-resolves the next track's direct stream URL in the background so track transitions bypass search and extraction delays.
+- **Deck 3 (Pipeline Lookahead):** Cues and validates metadata two tracks ahead, ensuring continuous non-stop progression.
 - **Vibe Modes:**
   - 🎯 **Artist Deep Dive:** Locks 100% onto the current artist's full catalog (albums, singles, B-sides).
   - 🤝 **Collabs & Circle:** Explores immediate collaborators, producers, and affiliated crews.
-  - 🧠 **Smart Vibe:** Harmonic balance of related artists, genre branches, and similar sonic profiles.
+  - 🧠 **Smart Vibe:** Balanced mix of Deezer Curated Artist Radio, related artists, and taste-weighted recommendations.
   - 🚀 **Wild Discovery:** Expands outward to discover fresh, unexpected gems within the same energy tier.
 - **Radio Guardrails:** 
   - **Anchor Lock (`⚓`):** Lock onto a favorite artist so exploration always stays anchored to that artist, or unlock for organic radio flow across the genre family tree.
@@ -92,14 +92,14 @@ Before running the bot, ensure you have:
 ### 🎵 Playback, Crate & Audio Controls
 - `/play <query> [source]` — Plays immediately if nothing is playing, or **automatically adds to the queue** if music is already playing (supports tracks, albums, and YouTube/Spotify/SoundCloud/Deezer URLs across all 9 engines).
 - `/playnow <query> [source]` — Immediately plays a track right now, bypassing the queue.
-- `/skip` — Instant zero-gap skip to the next queued or preloaded Deck 2 track.
+- `/skip` — Fast skip to the next queued or pre-resolved Deck 2 track.
 - `/pause` — Pauses current audio playback.
 - `/resume` — Resumes paused audio playback.
 - `/stop` — Stops audio, clears the queue, and disconnects from voice.
 - `/queue` — Displays the current queue with track durations and upcoming count.
 - `/nowplaying` — Rich embed with high-res artwork, live progress scrubber, and interactive playback buttons (`⏯️`, `⏭️`, `🔀`, `🔁`, `⏹️`, `❤️ Save to Crate`).
 - `/volume <1-100>` — Sets the playback volume dynamically (persisted and synced with Web Hub).
-- `/quality <auto | 128k | 192k | 320k>` — Switches streaming audio bitrate dynamically (persisted and synced with Web Hub).
+- `/quality <auto | 128k | 192k | 320k>` — Switches target FFmpeg audio transcode bitrate and stream format preference (persisted and synced with Web Hub).
 - `/shuffle` — Shuffles the server music queue (or re-rolls Deck 2 & Deck 3 AI autoplay tracks when the queue is empty).
 - `/loop <off | track | queue>` — Changes repeat loop mode (persisted and synced with Web Hub).
 - `/history` — Shows the last 10 tracks played in this server.

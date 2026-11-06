@@ -23,12 +23,12 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
      with pre-resolved direct audio stream URLs for instant transitions, and Deck 3 is pre-cued 
      in the chute two steps ahead with full double-skip protection.
 
-2. 🧠 Harmonic Multi-Deck AI Autoplay DJ & Vibe Anchor:
+2. 🧠 Multi-Platform Curated Autoplay DJ & Vibe Anchor:
    - Traditional autoplay simply scrapes YouTube's algorithm and quickly drifts into 
      viral TikTok memes, amateur bedroom recordings, or unrelated genres.
    - This bot features a multi-tiered recommendation engine prioritizing Deezer 
      Curated Artist Radio and YouTube Music studio masters.
-   - Harmonic Chain: Deck 3 is seeded directly from Deck 2, creating a smooth, 
+   - Sequential Lookahead Chain: Deck 3 is seeded directly from Deck 2, creating a smooth, 
      professionally curated musical story arc.
    - Vibe Anchor Protection & 1-Click Lock: Retains the user's seed artist and genre 
      across skips, with an interactive ⚓ Lock pill to lock the DJ into a specific sound.
@@ -47,7 +47,7 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
 4. 🧬 Real-Time Session Music DNA & Acoustic Spectrum Visualizer:
    - 100% Dynamic Public Taxonomy Resolution: Classifies tracks across 10 core musical genres and 
      30+ subgenres via live MusicBrainz and Last.fm taxonomy graphs without static artist limits.
-   - Live Audio Metrics: Computes real-time Energy (0-100), Danceability (0-100), and 
+   - Heuristic Session Metrics: Estimates session Energy (0-100), Danceability (0-100), and 
      Electronic-to-Acoustic sonic ratios.
    - Multi-Color Spectrum Capsule: Proportional visual bar displaying exact session genre distribution.
    - Top DNA Influences: Maps contributing artists with tailored subgenre badges.
@@ -94,7 +94,7 @@ support 9 distinct intelligence & streaming engines:
    - Ideal for live versions not found on studio albums.
 
 4. 🟣 Deezer Studio Masters (deezer)
-   - 320kbps high-fidelity studio catalog.
+   - Official studio catalog metadata, artist radio, and collaborator graphs.
    - Deep artist relationship graphs, official artist radio, and verified collaborator trees.
 
 5. 🟢 Spotify Catalog Match (spotify)
@@ -138,7 +138,7 @@ with adaptive split-screen & mobile layouts (zero header overlap):
    - Frequency Soundwave Visualizer: Animated purple equalizer bars that pulse synchronously 
      whenever music is actively playing in Discord.
    - Transport Buttons: Play/Pause, Skip, Shuffle, Loop, Stop.
-   - Zero-Jitter Volume Slider: Real-time slider with mouse-wheel scrolling support, 
+   - Live PCM Volume Slider: Real-time slider with mouse-wheel scrolling support, 
      instant scaling, and speaker icon one-click mute/unmute restoration.
    - ⚓ Vibe Anchor Badge & 1-Click Lock: Interactive pill showing current anchor artist with 
      instant toggle between Free Flow (🔓) and Locked (🔒) modes.
@@ -150,7 +150,7 @@ with adaptive split-screen & mobile layouts (zero header overlap):
    - Full reordering controls (▲ Move Up / ▼ Move Down).
    - Instant play button (▶) and single-track removal (✕).
    - 🎛️ Triple-Deck Preload Banner: Live visual indicator tracking both:
-     * 🟢 Deck 2 Ready (Next Up): Audio stream preloaded for 0ms transition.
+     * 🟢 Deck 2 Ready (Next Up): Direct audio stream URL pre-resolved to eliminate lookup delay.
      * 🔵 Deck 3 Cued (In The Chute): Pre-resolved 2 songs ahead in the pipeline.
    - Smart Queue Flush & Autoplay Re-roll: Clear Queue flushes preloaded AI tracks, 
      and Shuffle re-rolls fresh recommendations from the anchor.
@@ -218,12 +218,11 @@ with adaptive split-screen & mobile layouts (zero header overlap):
    - Double-Skip & Network Latency Protection: Even if members skip twice in rapid succession,
      playback begins instantly without buffering or waiting on API round-trips.
    - Dynamic Volume Transformer: Scales volume smoothly without resetting stream sockets.
-   - Configurable Audio Quality: Auto (Dynamic Adaptive), 128k (Eco), 192k (Balanced Studio), 
-     or 320k (Ultra Studio HQ).
+   - Configurable Target Bitrate: Auto (best available source stream), 128k, 192k, or 320k FFmpeg target encoding.
 
 2. Autonomous AI Vibe Engine (vibe_engine.py):
    - Prioritizes Deezer Curated Radio & Related Artist Graphs over uncurated feeds.
-   - Harmonic Seeding: Deck 3 is seeded by Deck 2 for seamless musical progression.
+   - Lookahead Seeding: Deck 3 is seeded by Deck 2 for seamless musical progression.
    - Comprehensive Blacklisting: Cross-checks history, current track, Deck 2, Deck 3, and user queue.
    - Evaluates vibe worthiness: blocks low-listen amateur tracks, skits (<65s), 
      multi-hour podcasts (>1500s), karaoke, sped-up/slowed spam, hoodtrap, and type beats.

@@ -493,16 +493,16 @@ function renderHistory(history) {
     return;
   }
   const rev = [...history].reverse();
-  list.innerHTML = rev.map((t, idx) => ` <div class="track-item">
+  list.innerHTML = rev.map((t, idx) => { const tid = registerTrackRef(t); return ` <div class="track-item">
 <span style="font-weight:700; color:var(--text-muted); font-size:0.8rem; width:22px;">#${idx + 1}</span>
 <img class="track-thumb" src="${t.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
 <div class="track-info-col"> <span class="item-title">${escapeHtml(t.title)}</span>
 <span class="item-artist">${escapeHtml(t.artist)} • ${t.duration || '--:--'} • <span class="tag-badge">${(t.source || 'PLAYED').toUpperCase()}</span></span>
 </div> <div class="track-action-btns">
-<button class="btn-small" title="Save to My Crate" onclick='saveTrackToCrate(${JSON.stringify(t).replace(/'/g, "&#39;")})'>❤️</button>
-<button class="btn-small" title="Replay Now" onclick='queueTrackDirect(${JSON.stringify(t).replace(/'/g, "&#39;")}, true)'>▶ Replay</button>
-<button class="btn-small" title="Queue Again" onclick='queueTrackDirect(${JSON.stringify(t).replace(/'/g, "&#39;")}, false)'>+ Queue</button>
-</div> </div> `).join('');
+<button class="btn-small" title="Save to My Crate" data-tid="${tid}" onclick="handleTrackBtn(this, 'crate')">❤️</button>
+<button class="btn-small" title="Replay Now" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Replay</button>
+<button class="btn-small" title="Queue Again" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">+ Queue</button>
+</div> </div> `; }).join('');
 }
 let unlockerArmed = false;
 function armAutoplayUnlocker() {
@@ -724,20 +724,25 @@ async function executeSearch() {
 <button class="btn-small" data-album-id="${escapeHtml(String(r.id || ''))}" data-title="${escapeHtml(r.title)}" data-artist="${escapeHtml(r.artist)}" onclick="queueAlbumDirect(this, false)">+ Add LP</button>
 </div> </div> <div class="album-tracks-tray" id="tray-search-${idx}-${safeAid}" style="display:none;"></div> </div> `;
       }
+      const tid = registerTrackRef(r);
       return ` <div class="track-item">
 <img class="track-thumb" src="${r.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
 <div class="track-info-col"> <span class="item-title">${escapeHtml(r.title)}</span>
 <span class="item-artist">${escapeHtml(r.artist)} • ${r.duration} • <span class="tag-badge">${r.source.toUpperCase()}</span></span>
 </div> <div class="track-action-btns">
-<button class="btn-small" title="Save to My Crate" onclick='saveTrackToCrate(${JSON.stringify(r).replace(/\'/g, "&#39;")})'>❤️</button>
-<button class="btn-small" onclick='queueTrackDirect(${JSON.stringify(r).replace(/\'/g, "&#39;")}, true)'>▶ Play Now</button>
-<button class="btn-small" onclick='queueTrackDirect(${JSON.stringify(r).replace(/\'/g, "&#39;")}, false)'>+ Queue</button> </div>
+<button class="btn-small" title="Save to My Crate" data-tid="${tid}" onclick="handleTrackBtn(this, 'crate')">❤️</button>
+<button class="btn-small" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Play Now</button>
+<button class="btn-small" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">+ Queue</button> </div>
 </div> `;
     }).join('');
   } catch (e) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>Search failed. Please try again.</div></div>`;
   }
 }
+window._trackRegistry = window._trackRegistry || new Map();
+function registerTrackRef(t) { const id = "trk_" + Math.random().toString(36).slice(2, 10); if (window._trackRegistry.size > 2000) window._trackRegistry.clear(); window._trackRegistry.set(id, t); return id; }
+function handleTrackBtn(btn, action) { const t = window._trackRegistry.get(btn.getAttribute("data-tid")); if (!t) return; if (action === "crate") saveTrackToCrate(t); else if (action === "play") queueTrackDirect(t, true); else if (action === "queue") queueTrackDirect(t, false); }
+window.registerTrackRef = registerTrackRef; window.handleTrackBtn = handleTrackBtn;
 async function queueTrackDirect(track, playNow = false) {
   if (!currentGuildId) currentGuildId = (document.getElementById("serverSelect") || {}).value || "";
   window.currentGuildId = currentGuildId;
@@ -796,8 +801,9 @@ async function loadCharts(forceRefresh = false) {
 <button class="btn-small" data-album-id="${escapeHtml(String(c.id || ''))}" data-title="${escapeHtml(c.title)}" data-artist="${escapeHtml(c.artist)}" onclick="queueAlbumDirect(this, false)">➕ Add</button>
 `;
       } else {
-        actions = ` <button class="btn-small" onclick='queueTrackDirect(${JSON.stringify(c).replace(/'/g, "&#39;")}, true)'>▶ Play</button>
-<button class="btn-small" onclick='queueTrackDirect(${JSON.stringify(c).replace(/'/g, "&#39;")}, false)'>➕ Add</button> `;
+        const tid = registerTrackRef(c);
+        actions = ` <button class="btn-small" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Play</button>
+<button class="btn-small" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">➕ Add</button> `;
       }
       return ` <div class="track-item">
 <span style="font-weight:800; color:#c77dff; font-size:0.9rem; width:28px;">#${c.position || i + 1}</span>

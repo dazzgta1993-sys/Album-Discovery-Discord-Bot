@@ -264,8 +264,8 @@ async def api_control(request: web.Request) -> web.Response:
         try:
             from app import store
             store.save_guild_settings(str(guild.id), {"is_anchor_locked": player.is_anchor_locked})
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Web handler notice: {_ex}')
         asyncio.create_task(player.update_player_message())
         return web.json_response({
             "status": "ok",
@@ -277,8 +277,8 @@ async def api_control(request: web.Request) -> web.Response:
         try:
             from app import store
             store.clear_playback_history(str(player.guild.id))
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Web handler notice: {_ex}')
         return web.json_response({"status": "ok", "message": "History cleared"})
     elif action == "set_volume":
         try:
@@ -299,16 +299,16 @@ async def api_control(request: web.Request) -> web.Response:
         try:
             from app import store
             store.save_guild_settings(str(guild.id), {"loop_mode": player.loop_mode})
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Web handler notice: {_ex}')
         asyncio.create_task(player.update_player_message())
     elif action == "set_autoplay":
         player.autoplay = bool(value)
         try:
             from app import store
             store.save_guild_settings(str(guild.id), {"autoplay": player.autoplay})
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Web handler notice: {_ex}')
         asyncio.create_task(player.update_player_message())
     elif action == "set_quality":
         if value in ("auto", "128k", "192k", "320k"):
@@ -316,8 +316,8 @@ async def api_control(request: web.Request) -> web.Response:
             try:
                 from app import store
                 store.save_guild_settings(str(guild.id), {"audio_quality": player.audio_quality})
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug(f'Web handler notice: {_ex}')
     elif action == "join_voice":
         ch_id = data.get("channel_id")
         channel = guild.get_channel(int(ch_id)) if ch_id else None
@@ -345,8 +345,8 @@ async def api_control(request: web.Request) -> web.Response:
         if "vibe_drift_freq" in data:
             try:
                 player.vibe_drift_freq = max(1, min(10, int(data["vibe_drift_freq"])))
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug(f'Web handler notice: {_ex}')
         if "hit_depth" in data and data["hit_depth"] in ("top_hits", "balanced", "deep_cuts"):
             player.hit_depth = data["hit_depth"]
         if "deck2_enabled" in data:
@@ -841,6 +841,10 @@ async def api_stream(request: web.Request) -> web.StreamResponse:
 
     if not stream_url:
         return web.Response(text="Stream URL unavailable", status=404)
+    from urllib.parse import urlparse
+    parsed_url = urlparse(str(stream_url).strip())
+    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc or str(stream_url).strip().startswith("-"):
+        return web.Response(text="Invalid stream URL format", status=400)
 
     if hasattr(player, "get_progress"):
         elapsed, _ = player.get_progress()
@@ -893,12 +897,13 @@ async def api_stream(request: web.Request) -> web.StreamResponse:
         try:
             proc.kill()
             await proc.wait()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Web handler notice: {_ex}')
 
     return response
 
 async def api_logs(request: web.Request) -> web.Response:
+    from web.album_api import handle_logs_io_sync
     logs_dir = os.path.join(os.path.dirname(WEB_DIR), "logs")
     file_map = {
         "bot": os.path.join(logs_dir, "bot.log"),
@@ -906,36 +911,9 @@ async def api_logs(request: web.Request) -> web.Response:
         "audio": os.path.join(logs_dir, "audio.log"),
         "errors": os.path.join(logs_dir, "errors.log"),
     }
-    if request.method == "POST":
-        for p in file_map.values():
-            if os.path.exists(p):
-                try:
-                    with open(p, "w", encoding="utf-8") as f: f.truncate(0)
-                except Exception: pass
-        return web.json_response({"status": "ok", "cleared": True})
     log_type = request.query.get("type", "all").lower().strip()
-    lines = []
-    if log_type in file_map:
-        target_path = file_map[log_type]
-        if os.path.exists(target_path):
-            try:
-                with open(target_path, "r", encoding="utf-8", errors="replace") as f:
-                    lines = [l.strip() for l in f.readlines()[-80:] if l.strip()]
-            except Exception:
-                pass
-    else:
-        # "all" - read from all categories and merge chronologically
-        merged = []
-        for p in file_map.values():
-            if os.path.exists(p):
-                try:
-                    with open(p, "r", encoding="utf-8", errors="replace") as f:
-                        merged.extend([l.strip() for l in f.readlines()[-60:] if l.strip()])
-                except Exception:
-                    pass
-        merged.sort()
-        lines = merged[-80:]
-    return web.json_response({"logs": lines, "type": log_type})
+    result = await asyncio.to_thread(handle_logs_io_sync, file_map, request.method, log_type)
+    return web.json_response(result)
 
 from web.album_api import api_album_tracks
 

@@ -373,7 +373,7 @@ window.renderQueue = function(queue, count, preloaded, deck3) {
               <span class="item-artist">${typeof escapeHtml === 'function' ? escapeHtml(t.artist) : t.artist} • ${t.duration || '--:--'} • <span class="tag-badge" style="background:rgba(157,78,221,0.15); color:#c77dff; border:1px solid rgba(157,78,221,0.3);">${t.deckLabel}</span></span>
             </div>
             <div class="track-action-btns">
-              <button class="btn-small" style="background:var(--accent-purple); color:#fff;" title="Play Now" onclick='queueTrackDirect(${JSON.stringify(t).replace(/'/g, "&#39;")}, true)'>▶ Play Now</button>
+              <button class="btn-small" style="background:var(--accent-purple); color:#fff;" title="Play Now" data-tid="${window.registerTrackRef ? window.registerTrackRef(t) : ''}" onclick="handleTrackBtn(this, 'play')" >▶ Play Now</button>
             </div>
           </div>
         `).join('')}

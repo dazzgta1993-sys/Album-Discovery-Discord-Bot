@@ -23,12 +23,12 @@ class MusicCog(commands.Cog, name="Music"):
                 if msg and hasattr(msg, "delete"):
                     try:
                         await msg.delete(delay=delay)
-                    except Exception:
-                        pass
+                    except Exception as _ex:
+                        log.debug(f'Notice: {_ex}')
             else:
                 await interaction.response.send_message(content=message, embed=embed, delete_after=delay)
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
 
     async def _send_error(self, interaction: discord.Interaction, message: str):
         await self._send_notice(interaction, message=message, delay=5.0)
@@ -68,8 +68,8 @@ class MusicCog(commands.Cog, name="Music"):
         try:
             if not interaction.response.is_done():
                 await interaction.response.defer()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         
         if not await self._ensure_voice(interaction):
             return
@@ -230,8 +230,8 @@ class MusicCog(commands.Cog, name="Music"):
                 else:
                     try:
                         await interaction.delete_original_response()
-                    except Exception:
-                        pass
+                    except Exception as _ex:
+                        log.debug(f'Notice: {_ex}')
                     asyncio.create_task(player.play_next())
                 return
 
@@ -403,8 +403,8 @@ class MusicCog(commands.Cog, name="Music"):
         else:
             try:
                 await interaction.delete_original_response()
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug(f'Notice: {_ex}')
             asyncio.create_task(player.play_next())
 
 
@@ -428,8 +428,8 @@ class MusicCog(commands.Cog, name="Music"):
         try:
             if not interaction.response.is_done():
                 await interaction.response.defer()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         if not await self._ensure_voice(interaction):
             return
 
@@ -655,8 +655,8 @@ class MusicCog(commands.Cog, name="Music"):
         try:
             from app import store
             store.save_guild_settings(str(interaction.guild.id), {"volume": player.volume})
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         await interaction.response.send_message(f"🔊 Volume set to **{val}%**", delete_after=3.5)
 
     @app_commands.command(name="quality", description="Set audio streaming bitrate quality")
@@ -673,8 +673,8 @@ class MusicCog(commands.Cog, name="Music"):
         try:
             from app import store
             store.save_guild_settings(str(interaction.guild.id), {"audio_quality": player.audio_quality})
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         await interaction.response.send_message(f"🎧 Audio quality set to **{bitrate.name}**", delete_after=3.5)
 
     @app_commands.command(name="shuffle", description="Shuffle the current music queue")
@@ -704,8 +704,8 @@ class MusicCog(commands.Cog, name="Music"):
         try:
             from app import store
             store.save_guild_settings(str(interaction.guild.id), {"loop_mode": player.loop_mode})
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         asyncio.create_task(player.update_player_message())
         await interaction.response.send_message(f"🔁 Loop mode set to: **{mode.name}**", delete_after=3.5)
 
@@ -839,8 +839,8 @@ class MusicCog(commands.Cog, name="Music"):
         try:
             if not interaction.response.is_done():
                 await interaction.response.defer()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         if not await self._ensure_voice(interaction):
             return
 

@@ -11,8 +11,8 @@ class PlayerControlsView(discord.ui.View):
     async def play_pause_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             await interaction.response.defer()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         if not self.player.voice_client:
             return
         if self.player.voice_client.is_paused():
@@ -25,8 +25,8 @@ class PlayerControlsView(discord.ui.View):
     async def skip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             await interaction.response.defer()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         if self.player.voice_client and (self.player.voice_client.is_playing() or self.player.voice_client.is_paused()):
             self.player.skip()
 
@@ -34,8 +34,8 @@ class PlayerControlsView(discord.ui.View):
     async def shuffle_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             await interaction.response.defer()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         if len(self.player.queue) >= 2:
             self.player.shuffle()
             await self.player.update_player_message()
@@ -53,20 +53,20 @@ class PlayerControlsView(discord.ui.View):
         try:
             from app import store
             store.save_guild_settings(str(self.player.guild.id), {"loop_mode": self.player.loop_mode})
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         try:
             await interaction.response.defer()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         await self.player.update_player_message()
 
     @discord.ui.button(label="⏹️", style=discord.ButtonStyle.danger, custom_id="btn_stop")
     async def stop_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             await interaction.response.defer()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Notice: {_ex}')
         self.player.stop()
 
     @discord.ui.button(label="❤️ Save to Crate", style=discord.ButtonStyle.secondary, custom_id="btn_favorite", row=1)

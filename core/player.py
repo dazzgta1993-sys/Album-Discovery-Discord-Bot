@@ -151,10 +151,10 @@ class GuildPlayer:
                     self.loop_mode = str(saved["loop_mode"])
                 if "volume" in saved:
                     try: self.volume = max(0.0, min(1.0, float(saved["volume"])))
-                    except Exception: pass
+                    except Exception as _ex: log.debug(f'Player setting notice: {_ex}')
                 if "is_anchor_locked" in saved: self.is_anchor_locked = bool(saved["is_anchor_locked"])
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Player notice: {_ex}')
         self.last_brain_decision: str = "Brain System Online • Standby"
 
     @property
@@ -232,17 +232,14 @@ class GuildPlayer:
                 loop_count = 0
                 last_bar_text = ""
                 while self.is_playing and self.voice_client and self.voice_client.is_connected():
-                    # 2.0s interval prevents Discord HTTP 429 rate limit penalty (which caused 5s freezing and jumping)
-                    await asyncio.sleep(2.0)
+                    # 15s interval respects Discord API message edit rate limits while pre-warming upcoming decks
+                    await asyncio.sleep(15.0)
                     if not self.is_playing or not self.voice_client or not self.voice_client.is_connected():
                         break
                     if self.voice_client.is_paused():
                         continue
                     loop_count += 1
-                    # Ensure next track is preloaded and ready before current track ends
-                    if loop_count % 3 == 0:
-                        asyncio.create_task(self._prewarm_next_track())
-                    
+                    asyncio.create_task(self._prewarm_next_track())
                     cur_bar = self.get_progress_bar()
                     if cur_bar != last_bar_text:
                         last_bar_text = cur_bar
@@ -330,8 +327,8 @@ class GuildPlayer:
                                 if not target.duration_seconds or target.duration_seconds <= 0:
                                     target.duration_seconds = dur
                                 target.duration_str = AudioTrack._format_duration(dur)
-                            except Exception:
-                                pass
+                            except Exception as _ex:
+                                log.debug(f'Player notice: {_ex}')
             if target.video_id and not target.stream_url:
                 s_url, hdrs = await asyncio.to_thread(stream_service.get_stream_info, target.video_id, self.audio_quality)
                 if s_url:
@@ -514,8 +511,8 @@ class GuildPlayer:
                 try:
                     from app import store
                     store.save_playback_history(str(self.guild.id), next_track.to_dict())
-                except Exception:
-                    pass
+                except Exception as _ex:
+                    log.debug(f'Player notice: {_ex}')
             is_auto = bool(
                 getattr(next_track, "is_autoplay", False)
                 or (next_track.requested_by and any(k in next_track.requested_by.lower() for k in ("autoplay", "brain dj")))
@@ -554,8 +551,8 @@ class GuildPlayer:
                                         if not next_track.duration_seconds or next_track.duration_seconds <= 0:
                                             next_track.duration_seconds = dur
                                         next_track.duration_str = AudioTrack._format_duration(dur)
-                                    except Exception:
-                                        pass
+                                    except Exception as _ex:
+                                        log.debug(f'Player notice: {_ex}')
 
                         if not next_track.video_id:
                             yt_q = f"{next_track.artist} {next_track.title}".strip() if next_track.artist not in ("YouTube Search", "Direct Query", "YouTube") else next_track.title
@@ -599,8 +596,8 @@ class GuildPlayer:
                 if self.text_channel:
                     try:
                         await self.text_channel.send(f"⚠️ Unable to stream **{next_track.artist} - {next_track.title}**. Skipping to next track.", delete_after=6.0)
-                    except Exception:
-                        pass
+                    except Exception as _ex:
+                        log.debug(f'Player notice: {_ex}')
                 asyncio.create_task(self.play_next())
                 return
             else:
@@ -653,8 +650,8 @@ class GuildPlayer:
                     try:
                         self._suppress_after = True
                         self.voice_client.stop()
-                    except Exception:
-                        pass
+                    except Exception as _ex:
+                        log.debug(f'Player notice: {_ex}')
                     await asyncio.sleep(0.08)
 
                 self._suppress_after = False
@@ -703,8 +700,8 @@ class GuildPlayer:
                         dur = int(meta["duration"])
                         track.duration_seconds = dur
                         track.duration_str = AudioTrack._format_duration(dur)
-                    except Exception:
-                        pass
+                    except Exception as _ex:
+                        log.debug(f'Player notice: {_ex}')
 
         # Universal High-Resolution Studio Artwork Resolver (Offloaded to background async worker so event loop never stalls)
         if not track.cover_url or "coverartarchive.org" in track.cover_url or "ytimg.com" in track.cover_url or not track.duration_seconds or track.duration_seconds <= 0:
@@ -732,8 +729,8 @@ class GuildPlayer:
                         track.duration_seconds = int(dz_t["duration"])
                         track.duration_str = AudioTrack._format_duration(track.duration_seconds)
                     await self.update_player_message()
-        except Exception:
-            pass
+        except Exception as _ex:
+            log.debug(f'Player notice: {_ex}')
 
     def _build_now_playing_embed(self, track: AudioTrack) -> discord.Embed:
         embed = discord.Embed(
@@ -885,8 +882,8 @@ class GuildPlayer:
             self._suppress_after = True
             try:
                 self.voice_client.stop()
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug(f'Player notice: {_ex}')
             asyncio.create_task(self.play_next())
             return True
         elif not self.is_playing:
@@ -911,8 +908,8 @@ class GuildPlayer:
         if self.voice_client and (self.voice_client.is_playing() or self.voice_client.is_paused()):
             try:
                 self.voice_client.stop()
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug(f'Player notice: {_ex}')
         self._start_idle_timer()
 
     def set_volume(self, vol: float):
@@ -947,8 +944,8 @@ class GuildPlayer:
                 if self.text_channel:
                     try:
                         await self.text_channel.send("👋 Left the voice channel due to inactivity.")
-                    except Exception:
-                        pass
+                    except Exception as _ex:
+                        log.debug(f'Player notice: {_ex}')
         self._idle_task = asyncio.create_task(_idle_disconnect())
 
     def _cancel_idle_timer(self):
@@ -978,9 +975,11 @@ class GuildPlayer:
         if self.voice_client:
             try:
                 await self.voice_client.disconnect(force=True)
-            except Exception:
-                pass
+            except Exception as _ex:
+                log.debug(f"Voice disconnect notice: {_ex}")
             self.voice_client = None
+        if hasattr(self.bot, "player_manager") and not self.queue:
+            self.bot.player_manager.players.pop(self.guild.id, None)
 
 class PlayerManager:
     def __init__(self, bot: discord.Client):

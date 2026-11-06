@@ -319,7 +319,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     worthy_sc = [t for t in sc_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                     if worthy_sc:
                         chosen = random.choice(worthy_sc[:5])
-                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", "SoundCloud Creator"), album="SoundCloud", duration_seconds=chosen.get("duration_seconds", 0), cover_url=chosen.get("cover") or "", video_id=chosen.get("video_id") or chosen.get("url"), requested_by="Brain DJ ?? (SoundCloud)", source="soundcloud")
+                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", "SoundCloud Creator"), album="SoundCloud", duration_seconds=chosen.get("duration_seconds", 0), cover_url=chosen.get("cover") or "", video_id=chosen.get("video_id") or chosen.get("url"), requested_by="Brain DJ 🧠 (SoundCloud)", source="soundcloud")
                         player.last_brain_decision = f"SoundCloud: Picked underground vibe for {target_art} -> {track.title}"
                         log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                         return track
@@ -334,7 +334,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                         chosen = random.choice(worthy_ytv[:4])
                         raw_dur = chosen.get("duration", 0)
                         dur_i = int(raw_dur) if (isinstance(raw_dur, (int, float)) or (isinstance(raw_dur, str) and str(raw_dur).isdigit())) else 0
-                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album="YouTube Live", duration_seconds=dur_i, cover_url=chosen.get("cover") or "", video_id=chosen.get("video_id") or chosen.get("id"), requested_by="Brain DJ ?? (YouTube Video)", source="youtube")
+                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album="YouTube Live", duration_seconds=dur_i, cover_url=chosen.get("cover") or "", video_id=chosen.get("video_id") or chosen.get("id"), requested_by="Brain DJ 🧠 (YouTube Video)", source="youtube")
                         player.last_brain_decision = f"YouTube Video: Picked live track for {target_art} -> {track.title}"
                         log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                         return track
@@ -354,7 +354,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                             worthy_mb = [t for t in mb_search if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                             if worthy_mb:
                                 chosen = random.choice(worthy_mb[:4])
-                                track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", alb_title), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by="Brain DJ ?? (MusicBrainz)", source="autoplay")
+                                track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", alb_title), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by="Brain DJ 🧠 (MusicBrainz)", source="autoplay")
                                 player.last_brain_decision = f"MusicBrainz Archive: {target_art} [{alb_title}] -> {track.title}"
                                 log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                                 return track
@@ -367,7 +367,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     worthy_charts = [c for c in chart_items if c.get("title", "").lower() not in recent_titles and c.get("artist", "").lower() not in recent_artists and not is_junk_album(c.get("title", ""), c.get("artist", ""))]
                     if worthy_charts:
                         chart_pick = random.choice(worthy_charts[:10])
-                        track = AudioTrack(title=chart_pick.get("title", "Unknown"), artist=chart_pick.get("artist", "Chart Artist"), album=chart_pick.get("album", "Official Chart"), duration_seconds=chart_pick.get("duration", 0), cover_url=chart_pick.get("cover") or "", requested_by="Brain DJ ?? (Official Chart)", source="autoplay")
+                        track = AudioTrack(title=chart_pick.get("title", "Unknown"), artist=chart_pick.get("artist", "Chart Artist"), album=chart_pick.get("album", "Official Chart"), duration_seconds=chart_pick.get("duration", 0), cover_url=chart_pick.get("cover") or "", requested_by="Brain DJ 🧠 (Official Chart)", source="autoplay")
                         player.last_brain_decision = f"Official Chart: Rotated hit {track.artist} - {track.title}"
                         log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                         return track
@@ -384,7 +384,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                             worthy_radio.sort(key=lambda x: x.get("rank", 0), reverse=True)
                             pool_limit = 12 if getattr(player, 'vibe_mode', '') == 'discovery' else 6
                             chosen = random.choice(worthy_radio[:pool_limit])
-                            track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", ""), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by="Brain DJ ?? (Deezer Vibe)", source="autoplay")
+                            track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", ""), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by="Brain DJ 🧠 (Deezer Vibe)", source="autoplay")
                             player.last_brain_decision = f"Deezer Curated Radio: Anchored from {target_art} -> {track.artist} - {track.title}"
                             log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                             return track
@@ -396,7 +396,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                             worthy_top = [t for t in top_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, artist_fans=rel_chosen.get("fans", 0))]
                             if worthy_top:
                                 chosen_t = random.choice(worthy_top[:3])
-                                track = AudioTrack(title=chosen_t.get("title", "Unknown"), artist=rel_chosen.get("name", "Related Artist"), album=chosen_t.get("album", ""), duration_seconds=chosen_t.get("duration", 0), cover_url=chosen_t.get("cover") or rel_chosen.get("picture_medium", ""), requested_by="Brain DJ ?? (Deezer Related)", source="autoplay")
+                                track = AudioTrack(title=chosen_t.get("title", "Unknown"), artist=rel_chosen.get("name", "Related Artist"), album=chosen_t.get("album", ""), duration_seconds=chosen_t.get("duration", 0), cover_url=chosen_t.get("cover") or rel_chosen.get("picture_medium", ""), requested_by="Brain DJ 🧠 (Deezer Related)", source="autoplay")
                                 player.last_brain_decision = f"Deezer Related Circle: Matched {track.artist} - {track.title}"
                                 log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                                 return track
@@ -418,7 +418,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     if worthy_yt:
                         yt_pool = 12 if getattr(player, 'vibe_mode', '') == 'discovery' else 6
                         chosen = random.choice(worthy_yt[:yt_pool])
-                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", "YouTube Music Radio"), album=chosen.get("album", ""), duration_seconds=chosen.get("duration_seconds", 0), cover_url=chosen.get("cover") or "", video_id=chosen.get("video_id"), requested_by="Brain DJ ?? (YouTube Music Radio)", source="autoplay")
+                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", "YouTube Music Radio"), album=chosen.get("album", ""), duration_seconds=chosen.get("duration_seconds", 0), cover_url=chosen.get("cover") or "", video_id=chosen.get("video_id"), requested_by="Brain DJ 🧠 (YouTube Music Radio)", source="autoplay")
                         player.last_brain_decision = f"YT Music Radio: Seeded from {effective_track.title} -> {track.artist} - {track.title}"
                         log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                         return track
@@ -431,7 +431,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     if worthy_apple:
                         chosen = random.choice(worthy_apple[:4])
                         brand_src = "Spotify" if e_choice == "spotify" else "Apple Music"
-                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", ""), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by=f"Brain DJ ?? ({brand_src})", source="autoplay")
+                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", ""), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by=f"Brain DJ 🧠 ({brand_src})", source="autoplay")
                         player.last_brain_decision = f"{brand_src}: Injected hit for {target_art} -> {track.title}"
                         log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                         return track

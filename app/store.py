@@ -120,6 +120,15 @@ def init_db():
                 PRIMARY KEY(guild_id, playlist_name)
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS taste_profiles (
+                guild_id TEXT NOT NULL,
+                artist TEXT NOT NULL,
+                score INTEGER DEFAULT 0,
+                updated_at REAL NOT NULL,
+                PRIMARY KEY(guild_id, artist)
+            )
+        """)
 
         conn.commit()
 
@@ -683,3 +692,36 @@ try:
     init_db()
 except Exception as _e:
     pass
+
+
+def save_taste_vote(guild_id: str, artist: str, score_delta: int) -> int:
+    """Saves or updates persistent taste score for an artist in SQLite."""
+    art = str(artist or "").strip().lower()
+    if not art:
+        return 0
+    with _get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT score FROM taste_profiles WHERE guild_id = ? AND artist = ?", (str(guild_id), art))
+        row = cursor.fetchone()
+        new_score = (row[0] + score_delta) if row else score_delta
+        cursor.execute("""
+            INSERT INTO taste_profiles (guild_id, artist, score, updated_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(guild_id, artist) DO UPDATE SET
+                score = ?,
+                updated_at = ?
+        """, (str(guild_id), art, new_score, time.time(), new_score, time.time()))
+        conn.commit()
+        return new_score
+
+
+def get_taste_scores(guild_id: str) -> dict:
+    """Retrieves all persistent artist taste scores for a guild from SQLite."""
+    try:
+        with _get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT artist, score FROM taste_profiles WHERE guild_id = ?", (str(guild_id),))
+            return {r[0]: r[1] for r in cursor.fetchall()}
+    except Exception as e:
+        log.debug(f"Taste profile read notice: {e}")
+        return {}

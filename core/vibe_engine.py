@@ -19,11 +19,15 @@ _guild_taste_store = {}
 
 def get_guild_taste_profile(guild_id: int) -> dict:
     if guild_id not in _guild_taste_store:
+        from app import store as db_store
+        db_scores = db_store.get_taste_scores(str(guild_id))
+        likes = {k for k, v in db_scores.items() if v > 0}
+        dislikes = {k for k, v in db_scores.items() if v < 0}
         _guild_taste_store[guild_id] = {
-            "likes": set(),
-            "dislikes": set(),
+            "likes": likes,
+            "dislikes": dislikes,
             "track_dislikes": set(),
-            "artist_scores": {}
+            "artist_scores": db_scores
         }
     store = _guild_taste_store[guild_id]
     return {
@@ -36,6 +40,7 @@ def get_guild_taste_profile(guild_id: int) -> dict:
     }
 
 def record_taste_feedback(guild_id: int, artist: str, title: str, vote: str) -> dict:
+    from app import store as db_store
     art = str(artist or "").strip().lower()
     tit = str(title or "").strip().lower()
     if guild_id not in _guild_taste_store:
@@ -46,19 +51,22 @@ def record_taste_feedback(guild_id: int, artist: str, title: str, vote: str) -> 
         if art:
             store["likes"].add(art)
             store["dislikes"].discard(art)
-            store["artist_scores"][art] = store["artist_scores"].get(art, 0) + 2
-        log.info(f"[{guild_id}] Thumbs UP: '{artist}' boosted (+2 taste score)")
+            new_score = db_store.save_taste_vote(str(guild_id), art, +2)
+            store["artist_scores"][art] = new_score
+        log.info(f"[{guild_id}] Thumbs UP: '{artist}' boosted (+2 taste score, persistent)")
     elif vote == "down":
         if art:
             store["dislikes"].add(art)
             store["likes"].discard(art)
-            store["artist_scores"][art] = store["artist_scores"].get(art, 0) - 10
+            new_score = db_store.save_taste_vote(str(guild_id), art, -10)
+            store["artist_scores"][art] = new_score
         if tit:
             store["track_dislikes"].add(f"{art} - {tit}")
             store["track_dislikes"].add(tit)
-        log.info(f"[{guild_id}] Thumbs DOWN: '{artist} - {title}' banished from session")
+        log.info(f"[{guild_id}] Thumbs DOWN: '{artist} - {title}' banished from session (persistent)")
     
     return get_guild_taste_profile(guild_id)
+
 
 
 def is_vibe_worthy(track_dict: dict, artist_fans: int = 0, clean_only: bool = False, disliked_artists: set = None, disliked_tracks: set = None) -> bool:

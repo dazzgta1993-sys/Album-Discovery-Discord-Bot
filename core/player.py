@@ -15,31 +15,12 @@ from core.logger import get_bot_logger
 log = get_bot_logger("player")
 
 class AudioTrack:
-    def __init__(
-        self,
-        title: str,
-        artist: str,
-        album: str = "",
-        duration_seconds: int = 0,
-        duration_str: str = "",
-        cover_url: str = "",
-        video_id: Optional[str] = None,
-        stream_url: Optional[str] = None,
-        requested_by: Optional[str] = None,
-        source: str = "deezer",
-        is_autoplay: bool = False
-    ):
-        self.title = title
-        self.artist = artist
-        self.album = album
+    def __init__(self, title: str, artist: str, album: str = "", duration_seconds: int = 0, duration_str: str = "", cover_url: str = "", video_id: Optional[str] = None, stream_url: Optional[str] = None, requested_by: Optional[str] = None, source: str = "deezer", is_autoplay: bool = False):
+        self.title, self.artist, self.album = title, artist, album
         self.duration_seconds = duration_seconds
         self.duration_str = duration_str or self._format_duration(duration_seconds)
-        self.cover_url = cover_url
-        self.video_id = video_id
-        self.stream_url = stream_url
-        self.requested_by = requested_by
-        self.source = source
-        self.is_autoplay = is_autoplay
+        self.cover_url, self.video_id, self.stream_url = cover_url, video_id, stream_url
+        self.requested_by, self.source, self.is_autoplay = requested_by, source, is_autoplay
         self.stream_headers = {}
 
     @staticmethod
@@ -54,9 +35,7 @@ class AudioTrack:
         return {"title": self.title, "artist": self.artist, "album": self.album, "duration": self.duration_str, "cover": self.cover_url, "requested_by": self.requested_by, "is_autoplay": getattr(self, "is_autoplay", False), "source": getattr(self, "source", "deezer")}
 
 class AccurateAudioSource(discord.PCMVolumeTransformer):
-    """
-    Precision audio stream wrapper that measures decoded 48kHz 16-bit stereo PCM frames.
-    """
+    """Precision audio stream wrapper measuring decoded 48kHz 16-bit stereo PCM frames."""
     def __init__(self, original, volume: float = 1.0):
         super().__init__(original, volume=volume)
         self.bytes_read: int = 0
@@ -64,17 +43,22 @@ class AccurateAudioSource(discord.PCMVolumeTransformer):
 
     def read(self) -> bytes:
         ret = super().read()
-        if not ret:
-            return ret
-        if self.first_read_time == 0.0:
-            self.first_read_time = time.time()
+        if not ret: return ret
+        if self.first_read_time == 0.0: self.first_read_time = time.time()
         self.bytes_read += len(ret)
         return ret
 
     def elapsed_seconds(self) -> float:
-        if self.bytes_read == 0:
-            return 0.0
-        return self.bytes_read / 192000.0
+        return self.bytes_read / 192000.0 if self.bytes_read else 0.0
+
+    def cleanup(self):
+        try:
+            if hasattr(self.original, "cleanup"):
+                self.original.cleanup()
+            elif hasattr(self.original, "_process") and self.original._process:
+                self.original._process.kill()
+        except Exception as _ex:
+            log.debug(f"Source cleanup notice: {_ex}")
 
 class GuildPlayer:
     def __init__(self, bot: discord.Client, guild: discord.Guild):
@@ -88,6 +72,15 @@ class GuildPlayer:
         self.current_track: Optional[AudioTrack] = None
         
         self.volume: float = DEFAULT_VOLUME
+
+    def _cleanup_active_source(self):
+        src = self._active_source
+        self._active_source = None
+        if src and hasattr(src, "cleanup"):
+            try:
+                src.cleanup()
+            except Exception as _ex:
+                log.debug(f"Source cleanup notice: {_ex}")
         self.loop_mode: str = "off"  # "off", "track", "queue"
         self.autoplay: bool = AUTOPLAY_DJ
         self.audio_quality: str = "auto"
@@ -619,6 +612,7 @@ class GuildPlayer:
                     options=ffmpeg_opts
                 )
                 transformed_source = AccurateAudioSource(audio_source, volume=self.volume)
+                self._cleanup_active_source()
                 self._active_source = transformed_source
                 self._cancel_progress_task()
                 self.play_start_time = time.time()
@@ -634,7 +628,7 @@ class GuildPlayer:
                         self._suppress_after = False
                         return
                     self._cancel_progress_task()
-                    self._active_source = None
+                    self._cleanup_active_source()
                     self.is_playing = False
                     loop = getattr(self.bot, 'loop', None) or asyncio.get_event_loop()
                     if loop and loop.is_running():
@@ -878,6 +872,7 @@ class GuildPlayer:
         self._is_stopped = False
         self._cancel_progress_task()
         self._was_manually_skipped = True
+        self._cleanup_active_source()
         if self.voice_client and (self.voice_client.is_playing() or self.voice_client.is_paused()):
             self._suppress_after = True
             try:
@@ -897,7 +892,7 @@ class GuildPlayer:
         self._suppress_after = True
         self.is_playing = False
         self._cancel_progress_task()
-        self._active_source = None
+        self._cleanup_active_source()
         self.play_start_time = 0.0
         self.pause_start_time = 0.0
         self.total_paused_time = 0.0

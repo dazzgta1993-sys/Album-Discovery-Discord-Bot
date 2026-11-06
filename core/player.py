@@ -72,15 +72,6 @@ class GuildPlayer:
         self.current_track: Optional[AudioTrack] = None
         
         self.volume: float = DEFAULT_VOLUME
-
-    def _cleanup_active_source(self):
-        src = self._active_source
-        self._active_source = None
-        if src and hasattr(src, "cleanup"):
-            try:
-                src.cleanup()
-            except Exception as _ex:
-                log.debug(f"Source cleanup notice: {_ex}")
         self.loop_mode: str = "off"  # "off", "track", "queue"
         self.autoplay: bool = AUTOPLAY_DJ
         self.audio_quality: str = "auto"
@@ -161,6 +152,15 @@ class GuildPlayer:
     @is_playing.setter
     def is_playing(self, value: bool):
         self._is_playing = bool(value)
+
+    def _cleanup_active_source(self):
+        src = self._active_source
+        self._active_source = None
+        if src and hasattr(src, "cleanup"):
+            try:
+                src.cleanup()
+            except Exception as _ex:
+                log.debug(f"Source cleanup notice: {_ex}")
 
     @property
     def is_connected(self) -> bool:

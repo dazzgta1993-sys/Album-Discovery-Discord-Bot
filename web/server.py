@@ -759,6 +759,9 @@ async def api_play(request: web.Request) -> web.Response:
             data["album"] = found[0].get("album", "")
             data["cover"] = found[0].get("cover_xl") or found[0].get("cover") or ""
             data["duration_seconds"] = int(found[0].get("duration", 0))
+        else:
+            data["title"] = query
+            data["artist"] = "Direct Query" 
 
     track = AudioTrack(
         title=data.get("title", "Unknown Title"),

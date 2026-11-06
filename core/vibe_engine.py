@@ -300,273 +300,142 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                         return track
 
         engine_src = getattr(player, "vibe_engine_source", "auto")
+        if engine_src == "auto":
+            # True dynamic multi-platform rotation across all music intelligence engines:
+            # 40% Deezer Curated Radio | 35% YouTube Music Radio | 15% Apple/Spotify | 10% Official Charts
+            roll = random.random()
+            if roll < 0.40: engines_to_try = ["deezer", "ytmusic", "apple", "charts"]
+            elif roll < 0.75: engines_to_try = ["ytmusic", "deezer", "apple", "charts"]
+            elif roll < 0.90: engines_to_try = ["apple", "deezer", "ytmusic", "charts"]
+            else: engines_to_try = ["charts", "ytmusic", "deezer", "apple"]
+        else:
+            engines_to_try = [engine_src, "deezer", "ytmusic"]
 
-        # ---------------------------------------------------------------------
-        # ENGINE: SOUNDCLOUD (Underground Mixes & Remixes Lock)
-        # ---------------------------------------------------------------------
-        if engine_src == "soundcloud":
-            try:
-                sc_tracks = await asyncio.to_thread(stream_service.search_soundcloud_tracks, f"{target_art} remix", limit=15)
-                if not sc_tracks:
-                    sc_tracks = await asyncio.to_thread(stream_service.search_soundcloud_tracks, target_art, limit=15)
-                worthy_sc = [t for t in sc_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
-                if worthy_sc:
-                    chosen = random.choice(worthy_sc[:5])
-                    track = AudioTrack(
-                        title=chosen.get("title", "Unknown"),
-                        artist=chosen.get("artist", "SoundCloud Creator"),
-                        album="SoundCloud",
-                        duration_seconds=chosen.get("duration_seconds", 0),
-                        cover_url=chosen.get("cover") or "",
-                        video_id=chosen.get("video_id") or chosen.get("url"),
-                        requested_by="Brain DJ 🧠 (SoundCloud)",
-                        source="soundcloud"
-                    )
-                    player.last_brain_decision = f"SoundCloud: Picked underground vibe for {target_art} -> {track.title}"
-                    log.info(f"[{player.guild.name}] {player.last_brain_decision}")
-                    return track
-            except Exception as sc_err:
-                log.debug(f"SoundCloud vibe notice: {sc_err}")
-
-        # ---------------------------------------------------------------------
-        # ENGINE: YOUTUBE VIDEO / LIVE (Concert, Sessions & Official Video Lock)
-        # ---------------------------------------------------------------------
-        if engine_src == "youtube":
-            try:
-                yt_vids = await asyncio.to_thread(stream_service.search_youtube_tracks, f"{target_art} official live", limit=12)
-                if not yt_vids:
-                    yt_vids = await asyncio.to_thread(stream_service.search_youtube_tracks, target_art, limit=12)
-                worthy_ytv = [t for t in yt_vids if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
-                if worthy_ytv:
-                    chosen = random.choice(worthy_ytv[:4])
-                    raw_dur = chosen.get("duration", 0)
-                    dur_i = int(raw_dur) if (isinstance(raw_dur, (int, float)) or (isinstance(raw_dur, str) and str(raw_dur).isdigit())) else 0
-                    track = AudioTrack(
-                        title=chosen.get("title", "Unknown"),
-                        artist=chosen.get("artist", target_art),
-                        album="YouTube Live",
-                        duration_seconds=dur_i,
-                        cover_url=chosen.get("cover") or "",
-                        video_id=chosen.get("video_id") or chosen.get("id"),
-                        requested_by="Brain DJ 🧠 (YouTube Video)",
-                        source="youtube"
-                    )
-                    player.last_brain_decision = f"YouTube Video: Picked live track for {target_art} -> {track.title}"
-                    log.info(f"[{player.guild.name}] {player.last_brain_decision}")
-                    return track
-            except Exception as ytv_err:
-                log.debug(f"YouTube video vibe notice: {ytv_err}")
-
-        # ---------------------------------------------------------------------
-        # ENGINE: MUSICBRAINZ TAXONOMY ARCHIVE (Deep Canonical Discography Lock)
-        # ---------------------------------------------------------------------
-        if engine_src == "musicbrainz":
-            try:
-                mb_disco = await asyncio.to_thread(musicbrainz_api.get_artist_categorized_discography, target_art, limit=30)
-                mb_albums = mb_disco.get("albums", []) if isinstance(mb_disco, dict) else []
-                if mb_albums:
-                    studio_alb = [a for a in mb_albums if a.get("category") == "Studio Albums" or a.get("primary_type") == "Album"]
-                    pool_alb = studio_alb or mb_albums
-                    sel_alb = random.choice(pool_alb[:8])
-                    alb_title = sel_alb.get("title", "")
-                    if alb_title:
-                        mb_search = await asyncio.to_thread(itunes_api.search_tracks, query=f"{target_art} {alb_title}", limit=8)
-                        worthy_mb = [t for t in mb_search if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
-                        if worthy_mb:
-                            chosen = random.choice(worthy_mb[:4])
-                            track = AudioTrack(
-                                title=chosen.get("title", "Unknown"),
-                                artist=chosen.get("artist", target_art),
-                                album=chosen.get("album", alb_title),
-                                duration_seconds=chosen.get("duration", 0),
-                                cover_url=chosen.get("cover") or "",
-                                requested_by="Brain DJ 🧠 (MusicBrainz)",
-                                source="autoplay"
-                            )
-                            player.last_brain_decision = f"MusicBrainz Archive: {target_art} [{alb_title}] -> {track.title}"
-                            log.info(f"[{player.guild.name}] {player.last_brain_decision}")
-                            return track
-            except Exception as mb_err:
-                log.debug(f"MusicBrainz vibe discovery notice: {mb_err}")
-
-        # ---------------------------------------------------------------------
-        # ENGINE: OFFICIAL CHARTS (Radio Top 40 & Hit Rotation Lock)
-        # ---------------------------------------------------------------------
-        if engine_src == "charts":
-            try:
-                charts_data = await asyncio.to_thread(official_charts.get_live_official_charts, country="gb", limit=40)
-                chart_items = (charts_data.get("tracks") or charts_data.get("items", [])) if isinstance(charts_data, dict) else []
-                worthy_charts = [c for c in chart_items if c.get("title", "").lower() not in recent_titles and not is_junk_album(c.get("title", ""), c.get("artist", ""))]
-                if worthy_charts:
-                    chart_pick = random.choice(worthy_charts[:10])
-                    track = AudioTrack(
-                        title=chart_pick.get("title", "Unknown"),
-                        artist=chart_pick.get("artist", "Chart Artist"),
-                        album=chart_pick.get("album", "Official Chart"),
-                        duration_seconds=chart_pick.get("duration", 0),
-                        cover_url=chart_pick.get("cover") or "",
-                        requested_by="Brain DJ 🧠 (Official Chart)",
-                        source="autoplay"
-                    )
-                    player.last_brain_decision = f"Official Chart: Locked hit {track.artist} - {track.title}"
-                    log.info(f"[{player.guild.name}] {player.last_brain_decision}")
-                    return track
-            except Exception as ch_err:
-                log.debug(f"Official chart lock notice: {ch_err}")
-
-                # =====================================================================
-        # 3. DEEZER SMART ARTIST RADIO & CURATED AFFINITY (PRIMARY FOR AUTO & DEEZER)
-        # =====================================================================
-        if engine_src in ("auto", "deezer"):
-            try:
-                artists = await asyncio.to_thread(deezer_api.search_artists, query=target_art, limit=1)
-                if artists:
-                    aid = str(artists[0]["id"])
-                    radio_tracks = await asyncio.to_thread(deezer_api.get_artist_radio, artist_id=aid, limit=30)
-                    worthy_radio = [
-                        t for t in radio_tracks
-                        if t.get("title", "").lower() not in recent_titles
-                        and (t.get("artist") or "").lower() not in recent_artists
-                        and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
-                    ]
-                    if worthy_radio:
-                        worthy_radio.sort(key=lambda x: x.get("rank", 0), reverse=True)
-                        pool_limit = 12 if getattr(player, 'vibe_mode', '') == 'discovery' else 6
-                        chosen = random.choice(worthy_radio[:pool_limit])
-                        track = AudioTrack(
-                            title=chosen.get("title", "Unknown"),
-                            artist=chosen.get("artist", target_art),
-                            album=chosen.get("album", ""),
-                            duration_seconds=chosen.get("duration", 0),
-                            cover_url=chosen.get("cover") or "",
-                            requested_by="Brain DJ 🧠 (Deezer Vibe)",
-                            source="autoplay"
-                        )
-                        player.last_brain_decision = f"Deezer Curated Radio: Anchored from {target_art} -> {track.artist} - {track.title}"
+        for e_choice in engines_to_try:
+            if e_choice == "soundcloud":
+                try:
+                    sc_tracks = await asyncio.to_thread(stream_service.search_soundcloud_tracks, f"{target_art} remix", limit=15)
+                    if not sc_tracks: sc_tracks = await asyncio.to_thread(stream_service.search_soundcloud_tracks, target_art, limit=15)
+                    worthy_sc = [t for t in sc_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                    if worthy_sc:
+                        chosen = random.choice(worthy_sc[:5])
+                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", "SoundCloud Creator"), album="SoundCloud", duration_seconds=chosen.get("duration_seconds", 0), cover_url=chosen.get("cover") or "", video_id=chosen.get("video_id") or chosen.get("url"), requested_by="Brain DJ ?? (SoundCloud)", source="soundcloud")
+                        player.last_brain_decision = f"SoundCloud: Picked underground vibe for {target_art} -> {track.title}"
                         log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                         return track
+                except Exception as sc_err: log.debug(f"SoundCloud vibe notice: {sc_err}")
 
-                    # Related Artists fallback on Deezer
-                    related = await asyncio.to_thread(deezer_api.get_related_artists, artist_id=aid, limit=12)
-                    worthy_related = [r for r in related if r.get("name", "").lower() not in recent_artists and (r.get("fans", 0) >= 3000 or r.get("nb_fan", 0) >= 3000)]
-                    if worthy_related:
-                        rel_chosen = random.choice(worthy_related[:4])
-                        top_tracks = await asyncio.to_thread(deezer_api.get_artist_top_tracks, artist_id=rel_chosen["id"], limit=6)
-                        worthy_top = [t for t in top_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, artist_fans=rel_chosen.get("fans", 0))]
-                        if worthy_top:
-                            chosen_t = random.choice(worthy_top[:3])
-                            track = AudioTrack(
-                                title=chosen_t.get("title", "Unknown"),
-                                artist=rel_chosen.get("name", "Related Artist"),
-                                album=chosen_t.get("album", ""),
-                                duration_seconds=chosen_t.get("duration", 0),
-                                cover_url=chosen_t.get("cover") or rel_chosen.get("picture_medium", ""),
-                                requested_by="Brain DJ 🧠 (Deezer Related)",
-                                source="autoplay"
-                            )
-                            player.last_brain_decision = f"Deezer Related Circle: Matched {track.artist} - {track.title}"
+            elif e_choice == "youtube":
+                try:
+                    yt_vids = await asyncio.to_thread(stream_service.search_youtube_tracks, f"{target_art} official live", limit=12)
+                    if not yt_vids: yt_vids = await asyncio.to_thread(stream_service.search_youtube_tracks, target_art, limit=12)
+                    worthy_ytv = [t for t in yt_vids if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                    if worthy_ytv:
+                        chosen = random.choice(worthy_ytv[:4])
+                        raw_dur = chosen.get("duration", 0)
+                        dur_i = int(raw_dur) if (isinstance(raw_dur, (int, float)) or (isinstance(raw_dur, str) and str(raw_dur).isdigit())) else 0
+                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album="YouTube Live", duration_seconds=dur_i, cover_url=chosen.get("cover") or "", video_id=chosen.get("video_id") or chosen.get("id"), requested_by="Brain DJ ?? (YouTube Video)", source="youtube")
+                        player.last_brain_decision = f"YouTube Video: Picked live track for {target_art} -> {track.title}"
+                        log.info(f"[{player.guild.name}] {player.last_brain_decision}")
+                        return track
+                except Exception as ytv_err: log.debug(f"YouTube video vibe notice: {ytv_err}")
+
+            elif e_choice == "musicbrainz":
+                try:
+                    mb_disco = await asyncio.to_thread(musicbrainz_api.get_artist_categorized_discography, target_art, limit=30)
+                    mb_albums = mb_disco.get("albums", []) if isinstance(mb_disco, dict) else []
+                    if mb_albums:
+                        studio_alb = [a for a in mb_albums if a.get("category") == "Studio Albums" or a.get("primary_type") == "Album"]
+                        pool_alb = studio_alb or mb_albums
+                        sel_alb = random.choice(pool_alb[:8])
+                        alb_title = sel_alb.get("title", "")
+                        if alb_title:
+                            mb_search = await asyncio.to_thread(itunes_api.search_tracks, query=f"{target_art} {alb_title}", limit=8)
+                            worthy_mb = [t for t in mb_search if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                            if worthy_mb:
+                                chosen = random.choice(worthy_mb[:4])
+                                track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", alb_title), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by="Brain DJ ?? (MusicBrainz)", source="autoplay")
+                                player.last_brain_decision = f"MusicBrainz Archive: {target_art} [{alb_title}] -> {track.title}"
+                                log.info(f"[{player.guild.name}] {player.last_brain_decision}")
+                                return track
+                except Exception as mb_err: log.debug(f"MusicBrainz vibe discovery notice: {mb_err}")
+
+            elif e_choice == "charts":
+                try:
+                    charts_data = await asyncio.to_thread(official_charts.get_live_official_charts, country="gb", limit=35)
+                    chart_items = (charts_data.get("tracks") or charts_data.get("items", [])) if isinstance(charts_data, dict) else []
+                    worthy_charts = [c for c in chart_items if c.get("title", "").lower() not in recent_titles and c.get("artist", "").lower() not in recent_artists and not is_junk_album(c.get("title", ""), c.get("artist", ""))]
+                    if worthy_charts:
+                        chart_pick = random.choice(worthy_charts[:10])
+                        track = AudioTrack(title=chart_pick.get("title", "Unknown"), artist=chart_pick.get("artist", "Chart Artist"), album=chart_pick.get("album", "Official Chart"), duration_seconds=chart_pick.get("duration", 0), cover_url=chart_pick.get("cover") or "", requested_by="Brain DJ ?? (Official Chart)", source="autoplay")
+                        player.last_brain_decision = f"Official Chart: Rotated hit {track.artist} - {track.title}"
+                        log.info(f"[{player.guild.name}] {player.last_brain_decision}")
+                        return track
+                except Exception as ch_err: log.debug(f"Official chart rotation notice: {ch_err}")
+
+            elif e_choice == "deezer":
+                try:
+                    artists = await asyncio.to_thread(deezer_api.search_artists, query=target_art, limit=1)
+                    if artists:
+                        aid = str(artists[0]["id"])
+                        radio_tracks = await asyncio.to_thread(deezer_api.get_artist_radio, artist_id=aid, limit=30)
+                        worthy_radio = [t for t in radio_tracks if t.get("title", "").lower() not in recent_titles and (t.get("artist") or "").lower() not in recent_artists and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                        if worthy_radio:
+                            worthy_radio.sort(key=lambda x: x.get("rank", 0), reverse=True)
+                            pool_limit = 12 if getattr(player, 'vibe_mode', '') == 'discovery' else 6
+                            chosen = random.choice(worthy_radio[:pool_limit])
+                            track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", ""), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by="Brain DJ ?? (Deezer Vibe)", source="autoplay")
+                            player.last_brain_decision = f"Deezer Curated Radio: Anchored from {target_art} -> {track.artist} - {track.title}"
                             log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                             return track
-            except Exception as dz_err:
-                log.debug(f"Deezer curated vibe notice: {dz_err}")
+                        related = await asyncio.to_thread(deezer_api.get_related_artists, artist_id=aid, limit=12)
+                        worthy_related = [r for r in related if r.get("name", "").lower() not in recent_artists and (r.get("fans", 0) >= 3000 or r.get("nb_fan", 0) >= 3000)]
+                        if worthy_related:
+                            rel_chosen = random.choice(worthy_related[:4])
+                            top_tracks = await asyncio.to_thread(deezer_api.get_artist_top_tracks, artist_id=rel_chosen["id"], limit=6)
+                            worthy_top = [t for t in top_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, artist_fans=rel_chosen.get("fans", 0))]
+                            if worthy_top:
+                                chosen_t = random.choice(worthy_top[:3])
+                                track = AudioTrack(title=chosen_t.get("title", "Unknown"), artist=rel_chosen.get("name", "Related Artist"), album=chosen_t.get("album", ""), duration_seconds=chosen_t.get("duration", 0), cover_url=chosen_t.get("cover") or rel_chosen.get("picture_medium", ""), requested_by="Brain DJ ?? (Deezer Related)", source="autoplay")
+                                player.last_brain_decision = f"Deezer Related Circle: Matched {track.artist} - {track.title}"
+                                log.info(f"[{player.guild.name}] {player.last_brain_decision}")
+                                return track
+                except Exception as dz_err: log.debug(f"Deezer curated vibe notice: {dz_err}")
 
-        # =====================================================================
-        # 4. YOUTUBE MUSIC ALGORITHMIC RADIO (ACTIVE IN AUTO FALLBACK & YTMUSIC LOCK)
-        # =====================================================================
-        if engine_src in ("auto", "ytmusic") and (player.vibe_mode in ("balanced", "discovery") or engine_src == "ytmusic"):
-            try:
-                # If target_art is anchor_art, query for anchor artist to prevent rabbit-hole drift!
-                if anchor_art and target_art.lower() == anchor_art.lower():
-                    ytm_query = f"{anchor_art} official music".strip()
-                    curr_vid = ""
-                else:
-                    curr_vid = getattr(effective_track, "video_id", "") or ""
-                    ytm_query = f"{effective_track.artist} {effective_track.title}".strip()
-                
-                yt_radio = await asyncio.to_thread(stream_service.get_ytmusic_related_tracks, video_id=curr_vid, query=ytm_query, limit=20)
-                cooldown_n = getattr(player, "artist_cooldown", 10)
-                worthy_yt = [
-                    t for t in yt_radio
-                    if t.get("title", "").lower() not in recent_titles
-                    and f"{t.get('artist', '').lower().strip()} - {t.get('title', '').lower().strip()}" not in failed_keys
-                    and (t.get("artist", "").lower().strip() not in recent_artists if cooldown_n > 0 else True)
-                    and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
-                ]
-                if not worthy_yt:
-                    worthy_yt = [t for t in yt_radio if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
-                if worthy_yt:
-                    yt_pool = 12 if getattr(player, 'vibe_mode', '') == 'discovery' else 6
-                    chosen = random.choice(worthy_yt[:yt_pool])
-                    track = AudioTrack(
-                        title=chosen.get("title", "Unknown"),
-                        artist=chosen.get("artist", "YouTube Music Radio"),
-                        album=chosen.get("album", ""),
-                        duration_seconds=chosen.get("duration_seconds", 0),
-                        cover_url=chosen.get("cover") or "",
-                        video_id=chosen.get("video_id"),
-                        requested_by="Brain DJ 🧠 (YouTube Music Radio)",
-                        source="autoplay"
-                    )
-                    player.last_brain_decision = f"YT Music Radio: Seeded from {effective_track.title} -> {track.artist} - {track.title}"
-                    log.info(f"[{player.guild.name}] {player.last_brain_decision}")
-                    return track
-            except Exception as ytm_err:
-                log.debug(f"YTMusic autoplay discovery notice: {ytm_err}")
+            elif e_choice == "ytmusic" and (player.vibe_mode in ("balanced", "discovery") or engine_src == "ytmusic"):
+                try:
+                    if anchor_art and target_art.lower() == anchor_art.lower():
+                        ytm_query = f"{anchor_art} official music".strip()
+                        curr_vid = ""
+                    else:
+                        curr_vid = getattr(effective_track, "video_id", "") or ""
+                        ytm_query = f"{effective_track.artist} {effective_track.title}".strip()
+                    yt_radio = await asyncio.to_thread(stream_service.get_ytmusic_related_tracks, video_id=curr_vid, query=ytm_query, limit=20)
+                    cooldown_n = getattr(player, "artist_cooldown", 10)
+                    worthy_yt = [t for t in yt_radio if t.get("title", "").lower() not in recent_titles and f"{t.get('artist', '').lower().strip()} - {t.get('title', '').lower().strip()}" not in failed_keys and (t.get("artist", "").lower().strip() not in recent_artists if cooldown_n > 0 else True) and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                    if not worthy_yt:
+                        worthy_yt = [t for t in yt_radio if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                    if worthy_yt:
+                        yt_pool = 12 if getattr(player, 'vibe_mode', '') == 'discovery' else 6
+                        chosen = random.choice(worthy_yt[:yt_pool])
+                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", "YouTube Music Radio"), album=chosen.get("album", ""), duration_seconds=chosen.get("duration_seconds", 0), cover_url=chosen.get("cover") or "", video_id=chosen.get("video_id"), requested_by="Brain DJ ?? (YouTube Music Radio)", source="autoplay")
+                        player.last_brain_decision = f"YT Music Radio: Seeded from {effective_track.title} -> {track.artist} - {track.title}"
+                        log.info(f"[{player.guild.name}] {player.last_brain_decision}")
+                        return track
+                except Exception as ytm_err: log.debug(f"YTMusic autoplay discovery notice: {ytm_err}")
 
-        # =====================================================================
-        # 5. APPLE MUSIC & SPOTIFY CATALOG DISCOVERY (ACTIVE IN AUTO, SPOTIFY, APPLE)
-        # =====================================================================
-        if engine_src in ("auto", "spotify", "apple"):
-            try:
-                itunes_tracks = await asyncio.to_thread(itunes_api.search_tracks, query=target_art, limit=15)
-                worthy_apple = [t for t in itunes_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
-                if worthy_apple:
-                    chosen = random.choice(worthy_apple[:4])
-                    brand_src = "Spotify" if engine_src == "spotify" else "Apple Music"
-                    track = AudioTrack(
-                        title=chosen.get("title", "Unknown"),
-                        artist=chosen.get("artist", target_art),
-                        album=chosen.get("album", ""),
-                        duration_seconds=chosen.get("duration", 0),
-                        cover_url=chosen.get("cover") or "",
-                        requested_by=f"Brain DJ 🧠 ({brand_src})",
-                        source="autoplay"
-                    )
-                    player.last_brain_decision = f"{brand_src}: Injected hit for {target_art} -> {track.title}"
-                    log.info(f"[{player.guild.name}] {player.last_brain_decision}")
-                    return track
-            except Exception as apple_err:
-                log.debug(f"Apple/Spotify autoplay notice: {apple_err}")
-
-        # =====================================================================
-        # 6. OFFICIAL CHARTS INJECTION (SMART CASCADE ANCHOR)
-        # =====================================================================
-        if engine_src == "auto":
-            try:
-                charts_data = await asyncio.to_thread(official_charts.get_live_official_charts, country="gb", limit=30)
-                chart_items = (charts_data.get("tracks") or charts_data.get("items", [])) if isinstance(charts_data, dict) else []
-                worthy_charts = [
-                    c for c in chart_items
-                    if c.get("title", "").lower() not in recent_titles
-                    and c.get("artist", "").lower() not in recent_artists
-                    and not is_junk_album(c.get("title", ""), c.get("artist", ""))
-                ]
-                if worthy_charts:
-                    chart_pick = random.choice(worthy_charts[:10])
-                    track = AudioTrack(
-                        title=chart_pick.get("title", "Unknown"),
-                        artist=chart_pick.get("artist", "Chart Artist"),
-                        album=chart_pick.get("album", "Official Chart"),
-                        duration_seconds=chart_pick.get("duration", 0),
-                        cover_url=chart_pick.get("cover") or "",
-                        requested_by="Autoplay DJ 🎛️ (Official Chart)",
-                        source="autoplay"
-                    )
-                    player.last_brain_decision = f"Official Chart: Injected hit {track.artist} - {track.title}"
-                    log.info(f"[{player.guild.name}] {player.last_brain_decision}")
-                    return track
-            except Exception as chart_err:
-                log.debug(f"Official chart autoplay injection notice: {chart_err}")
+            elif e_choice in ("spotify", "apple"):
+                try:
+                    itunes_tracks = await asyncio.to_thread(itunes_api.search_tracks, query=target_art, limit=15)
+                    worthy_apple = [t for t in itunes_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                    if worthy_apple:
+                        chosen = random.choice(worthy_apple[:4])
+                        brand_src = "Spotify" if e_choice == "spotify" else "Apple Music"
+                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", ""), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by=f"Brain DJ ?? ({brand_src})", source="autoplay")
+                        player.last_brain_decision = f"{brand_src}: Injected hit for {target_art} -> {track.title}"
+                        log.info(f"[{player.guild.name}] {player.last_brain_decision}")
+                        return track
+                except Exception as apple_err: log.debug(f"Apple/Spotify autoplay notice: {apple_err}")
 
         # =====================================================================
         # 7. FALLBACK TO ANCHOR ARTIST CLASSIC REPERTOIRE

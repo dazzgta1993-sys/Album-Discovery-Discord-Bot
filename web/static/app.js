@@ -212,17 +212,18 @@ async function pollGuildState(guildId) {
       let reqBy = p.current_track.requested_by ? p.current_track.requested_by : "Web Hub";
       reqBy = reqBy.replace(/\?\?/g, "🧠");
       document.getElementById("requestedByBadge").innerText = reqBy;
-      if (p.current_track.cover) {
+      if (p.current_track && p.current_track.cover) {
         if (coverImg.dataset.rawSrc !== p.current_track.cover) {
           coverImg.dataset.rawSrc = p.current_track.cover;
           coverImg.src = p.current_track.cover;
-          coverImg.style.display = "block";
-          placeholder.style.display = "none";
         }
+        coverImg.style.display = "block";
+        if (placeholder) placeholder.style.display = "none";
       } else {
         coverImg.dataset.rawSrc = "";
-        coverImg.style.display = "none";
-        placeholder.style.display = "flex";
+        coverImg.src = ALBUM_PLACEHOLDER_SVG;
+        coverImg.style.display = "block";
+        if (placeholder) placeholder.style.display = "none";
       }
     } else {
       document.getElementById("trackTitle").innerText = "Nothing Playing";
@@ -465,16 +466,14 @@ function handleCoverError(img) {
   const raw = img.dataset.rawSrc || img.src || "";
   if (raw && !raw.includes("/api/cover?url=") && (raw.startsWith("http://") || raw.startsWith("https://"))) {
     img.onerror = function() {
-      img.style.display = "none";
-      const p = document.getElementById("coverPlaceholder");
-      if (p) p.style.display = "flex";
+      img.onerror = null;
+      img.src = ALBUM_PLACEHOLDER_SVG;
     };
     img.src = "/api/cover?url=" + encodeURIComponent(raw);
     return;
   }
-  img.style.display = "none";
-  const p = document.getElementById("coverPlaceholder");
-  if (p) p.style.display = "flex";
+  img.onerror = null;
+  img.src = ALBUM_PLACEHOLDER_SVG;
 }
 
 function toggleStartupAutoplayPref() {

@@ -325,6 +325,9 @@ async def api_control(request: web.Request) -> web.Response:
         if channel and (isinstance(channel, (discord.VoiceChannel, discord.StageChannel)) or hasattr(channel, "connect")):
             try:
                 await player.connect(channel)
+                if player.autoplay and not player.is_playing:
+                    player._is_stopped = False
+                    asyncio.create_task(player.play_next())
             except Exception as e:
                 log.warning(f"Failed to join voice channel: {e}")
     elif action == "leave_voice":

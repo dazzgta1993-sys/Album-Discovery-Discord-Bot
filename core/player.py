@@ -881,12 +881,8 @@ class GuildPlayer:
                 self.voice_client.stop()
             except Exception as _ex:
                 log.debug(f'Player notice: {_ex}')
-            asyncio.create_task(self.play_next())
-            return True
-        elif not self.is_playing:
-            asyncio.create_task(self.play_next())
-            return True
-        return False
+        asyncio.create_task(self.play_next())
+        return True
 
     def stop(self):
         self._is_stopped = True

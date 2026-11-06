@@ -180,6 +180,7 @@ async def api_guild_state(request: web.Request) -> web.Response:
                 "hit_depth": getattr(player, "hit_depth", "balanced"),
                 "deck2_enabled": getattr(player, "deck2_enabled", True),
                 "deck3_enabled": getattr(player, "deck3_enabled", True),
+                "startup_autoplay": getattr(player, "startup_autoplay", True),
                 "explicit_filter": getattr(player, "explicit_filter", "allow"),
                 "artist_cooldown": getattr(player, "artist_cooldown", 10),
                 "era_filter": getattr(player, "era_filter", "all"),
@@ -353,6 +354,8 @@ async def api_control(request: web.Request) -> web.Response:
             player.deck2_enabled = bool(data["deck2_enabled"])
         if "deck3_enabled" in data:
             player.deck3_enabled = bool(data["deck3_enabled"])
+        if "startup_autoplay" in data:
+            player.startup_autoplay = bool(data["startup_autoplay"])
         if "explicit_filter" in data and data["explicit_filter"] in ("allow", "clean_only"):
             player.explicit_filter = data["explicit_filter"]
         if "artist_cooldown" in data:
@@ -365,6 +368,11 @@ async def api_control(request: web.Request) -> web.Response:
         if "vibe_engine_source" in data and str(data["vibe_engine_source"]) in ("auto", "ytmusic", "youtube", "deezer", "spotify", "apple", "soundcloud", "musicbrainz", "charts"):
             player.vibe_engine_source = str(data["vibe_engine_source"])
         player.last_brain_decision = f"Brain Hub Update: {player.vibe_mode.title()} (Drift: {player.vibe_drift_freq} tracks)"
+        try:
+            from core.config import save_bot_config
+            save_bot_config({"startup_autoplay": getattr(player, "startup_autoplay", True)})
+        except Exception as _cfg_ex:
+            log.debug(f"Config sync notice: {_cfg_ex}")
         log.info(f"[{guild.name}] Brain configuration updated: {player.vibe_mode}, drift={player.vibe_drift_freq}")
         try:
             from app import store
@@ -374,6 +382,7 @@ async def api_control(request: web.Request) -> web.Response:
                 "hit_depth": player.hit_depth,
                 "deck2_enabled": player.deck2_enabled,
                 "deck3_enabled": getattr(player, "deck3_enabled", True),
+                "startup_autoplay": getattr(player, "startup_autoplay", True),
                 "explicit_filter": player.explicit_filter,
                 "artist_cooldown": getattr(player, "artist_cooldown", 10),
                 "era_filter": getattr(player, "era_filter", "all"),
@@ -391,6 +400,7 @@ async def api_control(request: web.Request) -> web.Response:
                 "hit_depth": player.hit_depth,
                 "deck2_enabled": player.deck2_enabled,
                 "deck3_enabled": getattr(player, "deck3_enabled", True),
+                "startup_autoplay": getattr(player, "startup_autoplay", True),
                 "explicit_filter": player.explicit_filter
             }
         })

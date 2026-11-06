@@ -20,6 +20,7 @@ let currentBrainConfig = {
   hit_depth: "balanced",
   deck2_enabled: true,
   deck3_enabled: true,
+  startup_autoplay: true,
   explicit_filter: "allow",
   artist_cooldown: 10,
   era_filter: "all",
@@ -314,6 +315,14 @@ async function pollGuildState(guildId) {
           d3Btn.style.color = b.deck3_enabled ? "#38bdf8" : "var(--text-muted)";
         }
       }
+      if (b.startup_autoplay !== undefined) {
+        currentBrainConfig.startup_autoplay = b.startup_autoplay;
+        const saBtn = document.getElementById("btnStartupAutoplayToggle");
+        if (saBtn) {
+          saBtn.innerHTML = b.startup_autoplay ? "🚀 Startup Auto-Play: ON" : "Startup Auto-Play: OFF";
+          saBtn.style.color = b.startup_autoplay ? "#4ade80" : "var(--text-muted)";
+        }
+      }
       if (b.explicit_filter) { currentBrainConfig.explicit_filter = b.explicit_filter; setPillActive("exp", b.explicit_filter); }
       if (b.artist_cooldown !== undefined) { currentBrainConfig.artist_cooldown = b.artist_cooldown; setPillActive("cooldown", b.artist_cooldown); }
       if (b.era_filter) { currentBrainConfig.era_filter = b.era_filter; setPillActive("era", b.era_filter); }
@@ -443,6 +452,17 @@ function toggleDeck3Pref() {
   }
   sendBrainConfig({ deck3_enabled: currentBrainConfig.deck3_enabled });
   showToast("Deck 3 Pipeline: " + (currentBrainConfig.deck3_enabled ? "ENABLED 🎛️" : "DISABLED"), "🎛️");
+}
+
+function toggleStartupAutoplayPref() {
+  currentBrainConfig.startup_autoplay = !currentBrainConfig.startup_autoplay;
+  const btn = document.getElementById("btnStartupAutoplayToggle");
+  if (btn) {
+    btn.innerHTML = currentBrainConfig.startup_autoplay ? "🚀 Startup Auto-Play: ON" : "Startup Auto-Play: OFF";
+    btn.style.color = currentBrainConfig.startup_autoplay ? "#4ade80" : "var(--text-muted)";
+  }
+  sendBrainConfig({ startup_autoplay: currentBrainConfig.startup_autoplay });
+  showToast("Startup Auto-Play: " + (currentBrainConfig.startup_autoplay ? "ENABLED 🚀" : "DISABLED"), "🚀");
 }
 
 async function sendBrainConfig(partial) {

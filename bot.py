@@ -109,6 +109,35 @@ class AlbumDiscoveryBot(commands.Bot):
             name="/play | Album Discovery"
         )
         await self.change_presence(status=discord.Status.online, activity=activity)
+        asyncio.create_task(self._check_startup_autoplay())
+
+    async def _check_startup_autoplay(self):
+        """If startup_autoplay is enabled, automatically join active voice channel and begin playback."""
+        await asyncio.sleep(2.0)
+        for guild in self.guilds:
+            try:
+                player = self.player_manager.get_player(guild)
+                if not getattr(player, "startup_autoplay", True):
+                    log.info(f"[{guild.name}] Startup auto-play disabled by settings.")
+                    continue
+                if player.is_playing or (player.voice_client and player.voice_client.is_connected()):
+                    continue
+                target_vc = None
+                for vc in guild.voice_channels:
+                    human_members = [m for m in vc.members if not m.bot]
+                    if len(human_members) > 0:
+                        target_vc = vc
+                        break
+                if target_vc:
+                    log.info(f"[{guild.name}] Startup auto-play detected listener(s) in '{target_vc.name}'. Connecting...")
+                    connected = await player.connect(target_vc)
+                    if connected and not player.is_playing:
+                        player.autoplay = True
+                        player._is_stopped = False
+                        log.info(f"[{guild.name}] Startup auto-play: launching Brain DJ autoplay stream...")
+                        asyncio.create_task(player.play_next())
+            except Exception as e:
+                log.warning(f"Startup autoplay notice for {guild.name}: {e}")
 
     async def on_voice_state_update(self, member, before, after):
         # 1. If the bot itself was disconnected from a voice channel, stop playback immediately and do not auto-reconnect
@@ -135,6 +164,22 @@ class AlbumDiscoveryBot(commands.Bot):
                             await player.disconnect()
                         else:
                             log.info(f"[{guild.name}] Voice channel is empty, but playback/autoplay is active. Web audio preserved.")
+
+        # 3. Auto-join if user joins voice and bot is disconnected with startup_autoplay enabled
+        if after.channel and not member.bot and (not before.channel or before.channel.id != after.channel.id):
+            guild = after.channel.guild
+            player = self.player_manager.get_player(guild)
+            if player and not player.is_connected and not player.is_playing:
+                if getattr(player, "startup_autoplay", True):
+                    log.info(f"[{guild.name}] User '{member.display_name}' joined '{after.channel.name}'. Auto-joining...")
+                    try:
+                        connected = await player.connect(after.channel)
+                        if connected and not player.is_playing:
+                            player.autoplay = True
+                            player._is_stopped = False
+                            asyncio.create_task(player.play_next())
+                    except Exception as e:
+                        log.debug(f"Auto-join notice: {e}")
 
     async def on_guild_remove(self, guild: discord.Guild):
         log.info(f"Removed from guild {guild.name} ({guild.id}). Cleaning up player state.")

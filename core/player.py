@@ -9,7 +9,7 @@ import discord
 
 from app.services import stream_service, deezer_api, official_charts
 from app.utils.normalizer import is_junk_album
-from .config import DEFAULT_VOLUME, IDLE_DISCONNECT_SECONDS, AUTOPLAY_DJ, EMBED_COLOR
+from .config import DEFAULT_VOLUME, IDLE_DISCONNECT_SECONDS, AUTOPLAY_DJ, STARTUP_AUTOPLAY, EMBED_COLOR
 from core.logger import get_bot_logger
 
 log = get_bot_logger("player")
@@ -99,6 +99,7 @@ class GuildPlayer:
         self.hit_depth: str = "balanced"  # "top_hits", "balanced", "deep_cuts"
         self.deck2_enabled: bool = True   # Deck 2 standby zero-gap preloader
         self.deck3_enabled: bool = True   # Deck 3 pipeline preloader
+        self.startup_autoplay: bool = STARTUP_AUTOPLAY # Automatically join & play on startup
         self._was_manually_skipped: bool = False
         self.explicit_filter: str = "allow" # "allow", "clean_only"
         self.artist_cooldown: int = 10     # Authentic radio: 10 songs before an artist can repeat
@@ -123,6 +124,7 @@ class GuildPlayer:
                 if "hit_depth" in saved: self.hit_depth = str(saved["hit_depth"])
                 if "deck2_enabled" in saved: self.deck2_enabled = bool(saved["deck2_enabled"])
                 if "deck3_enabled" in saved: self.deck3_enabled = bool(saved["deck3_enabled"])
+                if "startup_autoplay" in saved: self.startup_autoplay = bool(saved["startup_autoplay"])
                 if "explicit_filter" in saved: self.explicit_filter = str(saved["explicit_filter"])
                 if "artist_cooldown" in saved: self.artist_cooldown = int(saved["artist_cooldown"])
                 if "era_filter" in saved: self.era_filter = str(saved["era_filter"])

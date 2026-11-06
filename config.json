@@ -3,6 +3,7 @@
   "default_volume": 1.0,
   "idle_disconnect_seconds": 300,
   "autoplay_dj": true,
+  "startup_autoplay": true,
   "embed_color": "9d4edd",
   "max_queue_display": 10,
   "web_enabled": true,

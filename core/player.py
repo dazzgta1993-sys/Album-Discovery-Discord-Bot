@@ -32,7 +32,8 @@ class AudioTrack:
         return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
     def to_dict(self) -> dict:
-        return {"title": self.title, "artist": self.artist, "album": self.album, "duration": self.duration_str, "cover": self.cover_url, "requested_by": self.requested_by, "is_autoplay": getattr(self, "is_autoplay", False), "source": getattr(self, "source", "deezer")}
+        dur = self.duration_str if (self.duration_str and self.duration_str != "--:--") else (self._format_duration(self.duration_seconds) if getattr(self, "duration_seconds", 0) else "--:--")
+        return {"title": self.title, "artist": self.artist, "album": self.album, "duration": dur, "duration_seconds": getattr(self, "duration_seconds", 0), "cover": self.cover_url, "requested_by": self.requested_by, "is_autoplay": getattr(self, "is_autoplay", False), "source": getattr(self, "source", "deezer"), "played_at": getattr(self, "played_at", None) or time.time()}
 
 class AccurateAudioSource(discord.PCMVolumeTransformer):
     """Precision audio stream wrapper measuring decoded 48kHz 16-bit stereo PCM frames."""
@@ -112,11 +113,9 @@ class GuildPlayer:
             from app import store
             saved_hist = store.load_playback_history(str(self.guild.id), limit=50)
             for td in saved_hist:
-                self.history.append(AudioTrack(
-                    title=td.get("title", "Unknown"), artist=td.get("artist", "Unknown"),
-                    album=td.get("album", ""), duration_seconds=int(td.get("duration_seconds") or 0),
-                    cover_url=td.get("cover") or td.get("cover_url") or "", requested_by="Played", source=td.get("source", "history")
-                ))
+                t = AudioTrack(title=td.get("title", "Unknown"), artist=td.get("artist", "Unknown"), album=td.get("album", ""), duration_seconds=int(td.get("duration_seconds") or 0), duration_str=td.get("duration") or "", cover_url=td.get("cover") or td.get("cover_url") or "", requested_by="Played", source=td.get("source", "history"))
+                t.played_at = td.get("played_at")
+                self.history.append(t)
             saved = store.load_guild_settings(str(self.guild.id))
             if saved:
                 if "vibe_mode" in saved: self.vibe_mode = str(saved["vibe_mode"])
@@ -502,6 +501,7 @@ class GuildPlayer:
 
             self.current_track = next_track
             if next_track not in self.history:
+                next_track.played_at = time.time()
                 self.history.append(next_track)
                 try:
                     from app import store

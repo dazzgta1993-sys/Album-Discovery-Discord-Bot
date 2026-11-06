@@ -504,7 +504,7 @@ def load_playback_history(guild_id: str, limit: int = 50) -> list:
             """)
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT track_json FROM playback_history
+                SELECT track_json, played_at FROM playback_history
                 WHERE guild_id = ?
                 ORDER BY id DESC LIMIT ?
             """, (str(guild_id), limit))
@@ -513,7 +513,10 @@ def load_playback_history(guild_id: str, limit: int = 50) -> list:
             for r in reversed(rows):
                 if r and r[0]:
                     try:
-                        tracks.append(json.loads(r[0]))
+                        td = json.loads(r[0])
+                        if len(r) > 1 and r[1]:
+                            td["played_at"] = r[1]
+                        tracks.append(td)
                     except Exception:
                         pass
             return tracks

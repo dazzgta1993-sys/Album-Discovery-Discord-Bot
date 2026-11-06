@@ -523,6 +523,18 @@ ${idx > 0 ? `<button class="btn-small" title="Move Up" onclick="moveQueueItem(${
 <button class="btn-small btn-danger" title="Remove" onclick="removeQueueItem(${idx})">✕</button> </div> </div> `).join('');
 }
 
+function formatTimeAgo(ts) {
+  if (!ts) return "";
+  const sec = Math.max(0, Math.floor((Date.now() - (ts * 1000)) / 1000));
+  if (sec < 60) return "just now";
+  const m = Math.floor(sec / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = new Date(ts * 1000);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 function renderHistory(history) {
   const count = (history && Array.isArray(history)) ? history.length : 0;
   const badge = document.getElementById("historyBadgeCount");
@@ -536,16 +548,27 @@ function renderHistory(history) {
     return;
   }
   const rev = [...history].reverse();
-  list.innerHTML = rev.map((t, idx) => { const tid = registerTrackRef(t); return ` <div class="track-item">
+  list.innerHTML = rev.map((t, idx) => {
+    const tid = registerTrackRef(t);
+    const dur = (t.duration && t.duration !== '--:--') ? t.duration : (t.duration_seconds ? formatDuration(t.duration_seconds) : '');
+    const timeTag = t.played_at ? `<span class="history-time-tag" title="${new Date(t.played_at * 1000).toLocaleString()}" style="color:#94a3b8; font-size:0.75rem;">🕒 ${formatTimeAgo(t.played_at)}</span>` : '';
+    const metaParts = [escapeHtml(t.artist)];
+    if (dur) metaParts.push(dur);
+    if (timeTag) metaParts.push(timeTag);
+    return ` <div class="track-item">
 <span style="font-weight:700; color:var(--text-muted); font-size:0.8rem; width:22px;">#${idx + 1}</span>
 <img class="track-thumb" referrerpolicy="no-referrer" src="${t.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
-<div class="track-info-col"> <span class="item-title">${escapeHtml(t.title)}</span>
-<span class="item-artist">${escapeHtml(t.artist)} • ${t.duration || '--:--'} • <span class="tag-badge">${(t.source || 'PLAYED').toUpperCase()}</span></span>
-</div> <div class="track-action-btns">
-<button class="btn-small" title="Save to My Crate" data-tid="${tid}" onclick="handleTrackBtn(this, 'crate')">❤️</button>
-<button class="btn-small" title="Replay Now" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Replay</button>
-<button class="btn-small" title="Queue Again" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">+ Queue</button>
-</div> </div> `; }).join('');
+<div class="track-info-col">
+  <span class="item-title">${escapeHtml(t.title)}</span>
+  <span class="item-artist">${metaParts.join(' • ')} • <span class="tag-badge">${(t.source || 'PLAYED').toUpperCase()}</span></span>
+</div>
+<div class="track-action-btns">
+  <button class="btn-small" title="Save to My Crate" data-tid="${tid}" onclick="handleTrackBtn(this, 'crate')">❤️</button>
+  <button class="btn-small" title="Replay Now" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Replay</button>
+  <button class="btn-small" title="Queue Again" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">+ Queue</button>
+</div>
+</div> `;
+  }).join('');
 }
 let unlockerArmed = false;
 function armAutoplayUnlocker() {

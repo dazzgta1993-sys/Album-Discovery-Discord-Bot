@@ -69,6 +69,15 @@ def record_taste_feedback(guild_id: int, artist: str, title: str, vote: str) -> 
 
 
 
+def normalize_title_base(title: str) -> str:
+    """Normalize song title to its core base, stripping remixes, features, radio edits, and punctuation."""
+    if not title:
+        return ""
+    t = re.sub(r'\(.*?\)|\[.*?\]', '', str(title).lower()).strip()
+    t = re.sub(r'\s+-\s+.*', '', t).strip()
+    t = re.sub(r'[^a-z0-9]', '', t)
+    return t
+
 def is_vibe_worthy(track_dict: dict, artist_fans: int = 0, clean_only: bool = False, disliked_artists: set = None, disliked_tracks: set = None) -> bool:
     """Shield against vibe killers: filters junk, skits, amateur spam, viral remixes, explicit tracks, and downvoted tracks."""
     title = track_dict.get("title", "")
@@ -221,6 +230,19 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
         if seed_track:
             recent_titles.add(seed_track.title.lower())
 
+        recent_base_titles = {normalize_title_base(t) for t in recent_titles if t}
+
+        def is_title_recent(title_str: str) -> bool:
+            if not title_str:
+                return True
+            tl = str(title_str).lower().strip()
+            if tl in recent_titles:
+                return True
+            tb = normalize_title_base(tl)
+            if tb and tb in recent_base_titles:
+                return True
+            return False
+
         cooldown_n = getattr(player, "artist_cooldown", 10)
         recent_artists = set()
         if cooldown_n > 0:
@@ -249,7 +271,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                 artist_tracks = await asyncio.to_thread(deezer_api.get_artist_top_tracks, artist_id=aid, limit=top_limit)
                 worthy_self = [
                     t for t in artist_tracks
-                    if t.get("title", "").lower() not in recent_titles
+                    if not is_title_recent(t.get("title", ""))
                     and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
                 ]
                 if worthy_self:
@@ -281,7 +303,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     top_tracks = await asyncio.to_thread(deezer_api.get_artist_top_tracks, artist_id=rel_chosen["id"], limit=8)
                     worthy_top = [
                         t for t in top_tracks
-                        if t.get("title", "").lower() not in recent_titles
+                        if not is_title_recent(t.get("title", ""))
                         and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
                     ]
                     if worthy_top:
@@ -316,7 +338,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                 try:
                     sc_tracks = await asyncio.to_thread(stream_service.search_soundcloud_tracks, f"{target_art} remix", limit=15)
                     if not sc_tracks: sc_tracks = await asyncio.to_thread(stream_service.search_soundcloud_tracks, target_art, limit=15)
-                    worthy_sc = [t for t in sc_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                    worthy_sc = [t for t in sc_tracks if not is_title_recent(t.get("title", "")) and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                     if worthy_sc:
                         chosen = random.choice(worthy_sc[:5])
                         track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", "SoundCloud Creator"), album="SoundCloud", duration_seconds=chosen.get("duration_seconds", 0), cover_url=chosen.get("cover") or "", video_id=chosen.get("video_id") or chosen.get("url"), requested_by="Brain DJ 🧠 (SoundCloud)", source="soundcloud")
@@ -329,7 +351,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                 try:
                     yt_vids = await asyncio.to_thread(stream_service.search_youtube_tracks, f"{target_art} official live", limit=12)
                     if not yt_vids: yt_vids = await asyncio.to_thread(stream_service.search_youtube_tracks, target_art, limit=12)
-                    worthy_ytv = [t for t in yt_vids if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                    worthy_ytv = [t for t in yt_vids if not is_title_recent(t.get("title", "")) and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                     if worthy_ytv:
                         chosen = random.choice(worthy_ytv[:4])
                         raw_dur = chosen.get("duration", 0)
@@ -351,7 +373,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                         alb_title = sel_alb.get("title", "")
                         if alb_title:
                             mb_search = await asyncio.to_thread(itunes_api.search_tracks, query=f"{target_art} {alb_title}", limit=8)
-                            worthy_mb = [t for t in mb_search if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                            worthy_mb = [t for t in mb_search if not is_title_recent(t.get("title", "")) and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                             if worthy_mb:
                                 chosen = random.choice(worthy_mb[:4])
                                 track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", alb_title), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by="Brain DJ 🧠 (MusicBrainz)", source="autoplay")
@@ -364,7 +386,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                 try:
                     charts_data = await asyncio.to_thread(official_charts.get_live_official_charts, country="gb", limit=35)
                     chart_items = (charts_data.get("tracks") or charts_data.get("items", [])) if isinstance(charts_data, dict) else []
-                    worthy_charts = [c for c in chart_items if c.get("title", "").lower() not in recent_titles and c.get("artist", "").lower() not in recent_artists and not is_junk_album(c.get("title", ""), c.get("artist", ""))]
+                    worthy_charts = [c for c in chart_items if not is_title_recent(c.get("title", "")) and c.get("artist", "").lower() not in recent_artists and not is_junk_album(c.get("title", ""), c.get("artist", ""))]
                     if worthy_charts:
                         chart_pick = random.choice(worthy_charts[:10])
                         track = AudioTrack(title=chart_pick.get("title", "Unknown"), artist=chart_pick.get("artist", "Chart Artist"), album=chart_pick.get("album", "Official Chart"), duration_seconds=chart_pick.get("duration", 0), cover_url=chart_pick.get("cover") or "", requested_by="Brain DJ 🧠 (Official Chart)", source="autoplay")
@@ -379,7 +401,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                     if artists:
                         aid = str(artists[0]["id"])
                         radio_tracks = await asyncio.to_thread(deezer_api.get_artist_radio, artist_id=aid, limit=30)
-                        worthy_radio = [t for t in radio_tracks if t.get("title", "").lower() not in recent_titles and (t.get("artist") or "").lower() not in recent_artists and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                        worthy_radio = [t for t in radio_tracks if not is_title_recent(t.get("title", "")) and (t.get("artist") or "").lower() not in recent_artists and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                         if worthy_radio:
                             worthy_radio.sort(key=lambda x: x.get("rank", 0), reverse=True)
                             pool_limit = 12 if getattr(player, 'vibe_mode', '') == 'discovery' else 6
@@ -393,7 +415,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                         if worthy_related:
                             rel_chosen = random.choice(worthy_related[:4])
                             top_tracks = await asyncio.to_thread(deezer_api.get_artist_top_tracks, artist_id=rel_chosen["id"], limit=6)
-                            worthy_top = [t for t in top_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, artist_fans=rel_chosen.get("fans", 0))]
+                            worthy_top = [t for t in top_tracks if not is_title_recent(t.get("title", "")) and is_vibe_worthy(t, artist_fans=rel_chosen.get("fans", 0))]
                             if worthy_top:
                                 chosen_t = random.choice(worthy_top[:3])
                                 track = AudioTrack(title=chosen_t.get("title", "Unknown"), artist=rel_chosen.get("name", "Related Artist"), album=chosen_t.get("album", ""), duration_seconds=chosen_t.get("duration", 0), cover_url=chosen_t.get("cover") or rel_chosen.get("picture_medium", ""), requested_by="Brain DJ 🧠 (Deezer Related)", source="autoplay")
@@ -412,9 +434,9 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
                         ytm_query = f"{effective_track.artist} {effective_track.title}".strip()
                     yt_radio = await asyncio.to_thread(stream_service.get_ytmusic_related_tracks, video_id=curr_vid, query=ytm_query, limit=20)
                     cooldown_n = getattr(player, "artist_cooldown", 10)
-                    worthy_yt = [t for t in yt_radio if t.get("title", "").lower() not in recent_titles and f"{t.get('artist', '').lower().strip()} - {t.get('title', '').lower().strip()}" not in failed_keys and (t.get("artist", "").lower().strip() not in recent_artists if cooldown_n > 0 else True) and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                    worthy_yt = [t for t in yt_radio if not is_title_recent(t.get("title", "")) and f"{t.get('artist', '').lower().strip()} - {t.get('title', '').lower().strip()}" not in failed_keys and (t.get("artist", "").lower().strip() not in recent_artists if cooldown_n > 0 else True) and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                     if not worthy_yt:
-                        worthy_yt = [t for t in yt_radio if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                        worthy_yt = [t for t in yt_radio if not is_title_recent(t.get("title", "")) and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
                     if worthy_yt:
                         yt_pool = 12 if getattr(player, 'vibe_mode', '') == 'discovery' else 6
                         chosen = random.choice(worthy_yt[:yt_pool])
@@ -426,13 +448,35 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
 
             elif e_choice in ("spotify", "apple"):
                 try:
-                    itunes_tracks = await asyncio.to_thread(itunes_api.search_tracks, query=target_art, limit=15)
-                    worthy_apple = [t for t in itunes_tracks if t.get("title", "").lower() not in recent_titles and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)]
+                    query_term = target_art
+                    if target_art.lower().strip() in recent_artists and player.vibe_mode != "deep_dive":
+                        query_term = f"{target_art} radio"
+                    itunes_tracks = await asyncio.to_thread(itunes_api.search_tracks, query=query_term, limit=20)
+                    worthy_apple = [
+                        t for t in itunes_tracks
+                        if not is_title_recent(t.get("title", ""))
+                        and ((t.get("artist") or "").lower().strip() not in recent_artists if (cooldown_n > 0 and player.vibe_mode != "deep_dive") else True)
+                        and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
+                    ]
+                    if not worthy_apple:
+                        worthy_apple = [
+                            t for t in itunes_tracks
+                            if not is_title_recent(t.get("title", ""))
+                            and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
+                        ]
                     if worthy_apple:
                         chosen = random.choice(worthy_apple[:4])
                         brand_src = "Spotify" if e_choice == "spotify" else "Apple Music"
-                        track = AudioTrack(title=chosen.get("title", "Unknown"), artist=chosen.get("artist", target_art), album=chosen.get("album", ""), duration_seconds=chosen.get("duration", 0), cover_url=chosen.get("cover") or "", requested_by=f"Brain DJ 🧠 ({brand_src})", source="autoplay")
-                        player.last_brain_decision = f"{brand_src}: Injected hit for {target_art} -> {track.title}"
+                        track = AudioTrack(
+                            title=chosen.get("title", "Unknown"),
+                            artist=chosen.get("artist", target_art),
+                            album=chosen.get("album", ""),
+                            duration_seconds=chosen.get("duration", 0),
+                            cover_url=chosen.get("cover") or "",
+                            requested_by=f"Brain DJ 🧠 ({brand_src})",
+                            source="autoplay"
+                        )
+                        player.last_brain_decision = f"{brand_src}: Injected hit for {track.artist} -> {track.title}"
                         log.info(f"[{player.guild.name}] {player.last_brain_decision}")
                         return track
                 except Exception as apple_err: log.debug(f"Apple/Spotify autoplay notice: {apple_err}")
@@ -445,7 +489,7 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
         if tracks:
             candidates = [
                 t for t in tracks
-                if t.get("title", "").lower() not in recent_titles
+                if not is_title_recent(t.get("title", ""))
                 and f"{t.get('artist', '').lower().strip()} - {t.get('title', '').lower().strip()}" not in failed_keys
                 and is_vibe_worthy(t, clean_only=clean_mode, disliked_artists=disliked_artists, disliked_tracks=disliked_tracks)
             ]

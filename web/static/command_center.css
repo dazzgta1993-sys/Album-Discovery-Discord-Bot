@@ -922,7 +922,9 @@ main {
   .badge-metric { padding: 3px 6px !important; font-size: 0.72rem !important; }
   main { grid-template-columns: 1fr !important; padding: 10px !important; gap: 12px !important; height: auto !important; overflow-y: auto !important; }
   .player-deck { max-width: 100% !important; padding: 10px 14px !important; gap: 6px !important; }
-  .cover-container { max-width: 135px !important; max-height: 135px !important; margin: 0 auto !important; border: 1px solid rgba(157, 78, 221, 0.4) !important; box-shadow: 0 4px 18px rgba(0,0,0,0.6) !important; }
+  .cover-container { width: 135px !important; height: 135px !important; max-width: 135px !important; max-height: 135px !important; aspect-ratio: 1 !important; margin: 0 auto !important; border: 1px solid rgba(157, 78, 221, 0.4) !important; box-shadow: 0 4px 18px rgba(0,0,0,0.6) !important; border-radius: 12px !important; overflow: hidden !important; display: flex !important; align-items: center !important; justify-content: center !important; }
+    .cover-img { width: 100% !important; height: 100% !important; object-fit: cover !important; display: block !important; }
+    .cover-placeholder { width: 100% !important; height: 100% !important; display: flex !important; align-items: center !important; justify-content: center !important; }
   .cover-img { max-height: 135px !important; }
   .voice-status-bar { padding: 5px 10px !important; font-size: 0.78rem !important; }
   .tabs-header { display: flex !important; flex-wrap: wrap !important; gap: 6px !important; padding-bottom: 8px !important; overflow-x: visible !important; }

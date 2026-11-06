@@ -209,14 +209,20 @@ async function pollGuildState(guildId) {
       document.getElementById("trackTitle").innerText = p.current_track.title || "Unknown";
       document.getElementById("trackArtist").innerText = p.current_track.artist || "Unknown";
       document.getElementById("sourceBadge").innerText = p.current_track.source ? p.current_track.source.toUpperCase() : "DEEZER";
-      document.getElementById("requestedByBadge").innerText = p.current_track.requested_by ? p.current_track.requested_by : "Web Hub";
+      let reqBy = p.current_track.requested_by ? p.current_track.requested_by : "Web Hub";
+      reqBy = reqBy.replace(/\?\?/g, "🧠");
+      document.getElementById("requestedByBadge").innerText = reqBy;
       if (p.current_track.cover) {
-        coverImg.src = p.current_track.cover;
-        coverImg.style.display = "block";
-        placeholder.style.display = "none";
+        if (coverImg.dataset.rawSrc !== p.current_track.cover) {
+          coverImg.dataset.rawSrc = p.current_track.cover;
+          coverImg.src = p.current_track.cover;
+          coverImg.style.display = "block";
+          placeholder.style.display = "none";
+        }
       } else {
+        coverImg.dataset.rawSrc = "";
         coverImg.style.display = "none";
-        placeholder.style.display = "block";
+        placeholder.style.display = "flex";
       }
     } else {
       document.getElementById("trackTitle").innerText = "Nothing Playing";
@@ -454,6 +460,23 @@ function toggleDeck3Pref() {
   showToast("Deck 3 Pipeline: " + (currentBrainConfig.deck3_enabled ? "ENABLED 🎛️" : "DISABLED"), "🎛️");
 }
 
+function handleCoverError(img) {
+  if (!img) return;
+  const raw = img.dataset.rawSrc || img.src || "";
+  if (raw && !raw.includes("/api/cover?url=") && (raw.startsWith("http://") || raw.startsWith("https://"))) {
+    img.onerror = function() {
+      img.style.display = "none";
+      const p = document.getElementById("coverPlaceholder");
+      if (p) p.style.display = "flex";
+    };
+    img.src = "/api/cover?url=" + encodeURIComponent(raw);
+    return;
+  }
+  img.style.display = "none";
+  const p = document.getElementById("coverPlaceholder");
+  if (p) p.style.display = "flex";
+}
+
 function toggleStartupAutoplayPref() {
   currentBrainConfig.startup_autoplay = !currentBrainConfig.startup_autoplay;
   const btn = document.getElementById("btnStartupAutoplayToggle");
@@ -493,7 +516,7 @@ function renderQueue(queue, count) {
   }
   list.innerHTML = queue.map((t, idx) => ` <div class="track-item">
 <span style="font-weight:700; color:var(--text-muted); font-size:0.8rem; width:20px;">#${idx + 1}</span>
-<img class="track-thumb" src="${t.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
+<img class="track-thumb" referrerpolicy="no-referrer" src="${t.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
 <div class="track-info-col"> <span class="item-title">${escapeHtml(t.title)}</span>
 <span class="item-artist">${escapeHtml(t.artist)} • ${t.duration || '--:--'}</span> </div> <div class="track-action-btns">
 ${idx > 0 ? `<button class="btn-small" title="Move Up" onclick="moveQueueItem(${idx}, ${idx - 1})">▲</button>` : ''} ${idx < queue.length - 1 ? `<button class="btn-small" title="Move Down" onclick="moveQueueItem(${idx}, ${idx + 1})">▼</button>` : ''} <button class="btn-small" title="Play Now" onclick="queuePlayNow(${idx})">▶</button>
@@ -515,7 +538,7 @@ function renderHistory(history) {
   const rev = [...history].reverse();
   list.innerHTML = rev.map((t, idx) => { const tid = registerTrackRef(t); return ` <div class="track-item">
 <span style="font-weight:700; color:var(--text-muted); font-size:0.8rem; width:22px;">#${idx + 1}</span>
-<img class="track-thumb" src="${t.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
+<img class="track-thumb" referrerpolicy="no-referrer" src="${t.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
 <div class="track-info-col"> <span class="item-title">${escapeHtml(t.title)}</span>
 <span class="item-artist">${escapeHtml(t.artist)} • ${t.duration || '--:--'} • <span class="tag-badge">${(t.source || 'PLAYED').toUpperCase()}</span></span>
 </div> <div class="track-action-btns">
@@ -735,7 +758,7 @@ async function executeSearch() {
         const safeAid = String(r.id || idx).replace(/[^a-zA-Z0-9_-]/g, "_");
         const tracksTxt = r.tracks_count ? `${r.tracks_count} tracks` : "Full Album";
         return ` <div class="album-item-container"> <div class="album-card-item">
-<img class="album-card-thumb" src="${r.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
+<img class="album-card-thumb" referrerpolicy="no-referrer" src="${r.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
 <div class="track-info-col"> <span class="item-title" style="font-size:0.95rem; font-weight:700;">${escapeHtml(r.title)}</span>
 <span class="item-artist">${escapeHtml(r.artist)} • <span class="album-badge">💿 ${r.record_type || 'ALBUM'}</span> • <span style="color:#c77dff; font-weight:600;">${tracksTxt}</span></span>
 </div> <div class="track-action-btns">
@@ -746,7 +769,7 @@ async function executeSearch() {
       }
       const tid = registerTrackRef(r);
       return ` <div class="track-item">
-<img class="track-thumb" src="${r.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
+<img class="track-thumb" referrerpolicy="no-referrer" src="${r.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
 <div class="track-info-col"> <span class="item-title">${escapeHtml(r.title)}</span>
 <span class="item-artist">${escapeHtml(r.artist)} • ${r.duration} • <span class="tag-badge">${r.source.toUpperCase()}</span></span>
 </div> <div class="track-action-btns">
@@ -827,7 +850,7 @@ async function loadCharts(forceRefresh = false) {
       }
       return ` <div class="track-item">
 <span style="font-weight:800; color:#c77dff; font-size:0.9rem; width:28px;">#${c.position || i + 1}</span>
-<img class="track-thumb" src="${c.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
+<img class="track-thumb" referrerpolicy="no-referrer" src="${c.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
 <div class="track-info-col"> <span class="item-title">${escapeHtml(c.title)}</span>
 <span class="item-artist">${escapeHtml(c.artist)}${durText}</span> </div> <div class="track-action-btns"> ${actions} </div> </div>
 `;
@@ -960,7 +983,7 @@ function renderDiscographyAlbums() {
     const safeAid = String(a.id || idx).replace(/[^a-zA-Z0-9_-]/g, "_");
     const isLP = cat === "Studio Albums";
     return ` <div class="album-item-container"> <div class="album-card-item">
-<img class="album-card-thumb" src="${coverSrc}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" alt="" />
+<img class="album-card-thumb" referrerpolicy="no-referrer" src="${coverSrc}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" alt="" />
 <div class="track-info-col"> <span class="item-title" style="font-size:0.95rem; font-weight:700;">${escapeHtml(a.title)} ${yr ? `<span style="color:var(--text-muted); font-size:0.8rem; font-weight:500;">(${yr})</span>` : ''}</span>
 <span class="item-artist">${escapeHtml(a.artist || currentDiscographyData.artist)} • <span class="album-badge">${isLP ? '💿 ' : ''}${cat}</span> • <span style="color:#c77dff; font-weight:600;">${tracks ? tracks + ' tracks' : 'Full Release'}</span></span>
 </div> <div class="track-action-btns">

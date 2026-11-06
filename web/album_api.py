@@ -367,3 +367,33 @@ async def api_crate(request: web.Request) -> web.Response:
         return web.json_response({"status": "ok", "enqueued_count": len(q_tracks), "total": total})
 
     return web.json_response({"error": f"Unknown crate action: {action}"}, status=400)
+
+
+async def api_cover_proxy(request: web.Request) -> web.Response:
+    """Proxy cover art images to bypass CORS, referer blocking, and third-party CDN rate limits."""
+    url = request.query.get("url", "").strip()
+    if not url or not (url.startswith("http://") or url.startswith("https://")):
+        return web.Response(status=400)
+    try:
+        import urllib.request
+        def _fetch():
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+            })
+            with urllib.request.urlopen(req, timeout=4.0) as resp:
+                data = resp.read()
+                ctype = resp.headers.get("Content-Type", "image/jpeg")
+                return data, ctype
+        data, ctype = await asyncio.to_thread(_fetch)
+        return web.Response(
+            body=data,
+            content_type=ctype,
+            headers={
+                "Cache-Control": "public, max-age=86400, no-transform",
+                "Access-Control-Allow-Origin": "*",
+            }
+        )
+    except Exception as e:
+        log.debug(f"Cover proxy fallback notice: {e}")
+        return web.Response(status=404)

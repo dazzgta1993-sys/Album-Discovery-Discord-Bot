@@ -14,6 +14,7 @@ let lastMonitoredTrack = "";
 window._lastDeck2Track = null;
 window._isSkipping = false;
 window._skippedTrackTitle = "";
+let lastDnaTrackKey = "";
 let currentBrainConfig = {
   vibe_mode: "balanced",
   vibe_drift_freq: 1,
@@ -236,6 +237,13 @@ async function pollGuildState(guildId) {
       coverImg.style.display = "block";
     }
     if (typeof updateAnchorBadge === "function") updateAnchorBadge(p);
+    const currentTrackKey = p.current_track ? (p.current_track.artist + " - " + p.current_track.title) : "";
+    if (currentTrackKey && currentTrackKey !== lastDnaTrackKey) {
+      lastDnaTrackKey = currentTrackKey;
+      if (typeof window.refreshMusicDna === "function") {
+        setTimeout(window.refreshMusicDna, 300);
+      }
+    }
     localElapsed = p.progress.elapsed || 0;
     localTotal = p.progress.total || 0;
     lastPollTimestamp = performance.now();

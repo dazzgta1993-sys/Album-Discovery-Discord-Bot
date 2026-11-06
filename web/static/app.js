@@ -205,6 +205,10 @@ async function pollGuildState(guildId) {
     btnPlay.innerText = (isPlaying && !isPaused) ? "⏸" : "▶";
     const coverImg = document.getElementById("trackCover");
     const placeholder = document.getElementById("coverPlaceholder");
+    if (placeholder) {
+      placeholder.style.display = "none";
+      try { placeholder.remove(); } catch (e) {}
+    }
     if (p.current_track) {
       document.getElementById("trackTitle").innerText = p.current_track.title || "Unknown";
       document.getElementById("trackArtist").innerText = p.current_track.artist || "Unknown";
@@ -212,26 +216,24 @@ async function pollGuildState(guildId) {
       let reqBy = p.current_track.requested_by ? p.current_track.requested_by : "Web Hub";
       reqBy = reqBy.replace(/\?\?/g, "🧠");
       document.getElementById("requestedByBadge").innerText = reqBy;
-      if (p.current_track && p.current_track.cover) {
+      if (p.current_track.cover) {
         if (coverImg.dataset.rawSrc !== p.current_track.cover) {
           coverImg.dataset.rawSrc = p.current_track.cover;
           coverImg.src = p.current_track.cover;
         }
-        coverImg.style.display = "block";
-        if (placeholder) placeholder.style.display = "none";
       } else {
         coverImg.dataset.rawSrc = "";
         coverImg.src = ALBUM_PLACEHOLDER_SVG;
-        coverImg.style.display = "block";
-        if (placeholder) placeholder.style.display = "none";
       }
+      coverImg.style.display = "block";
     } else {
       document.getElementById("trackTitle").innerText = "Nothing Playing";
       document.getElementById("trackArtist").innerText = "Queue is idle";
       document.getElementById("sourceBadge").innerText = "IDLE";
       document.getElementById("requestedByBadge").innerText = "Ready";
-      coverImg.style.display = "none";
-      placeholder.style.display = "block";
+      coverImg.dataset.rawSrc = "";
+      coverImg.src = ALBUM_PLACEHOLDER_SVG;
+      coverImg.style.display = "block";
     }
     if (typeof updateAnchorBadge === "function") updateAnchorBadge(p);
     localElapsed = p.progress.elapsed || 0;

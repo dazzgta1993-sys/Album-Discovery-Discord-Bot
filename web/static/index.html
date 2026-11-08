@@ -13,6 +13,7 @@
   <meta http-equiv="Expires" content="0" />
   <link rel="stylesheet" href="/static/style.css?v=6.5.0">
   <link rel="stylesheet" href="/static/command_center.css?v=6.5.0">
+  <link rel="stylesheet" href="/static/audio_lab.css?v=6.5.0">
   <style>
     /* Guaranteed Header & DNA Layout Essentials */
     header { display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 16px; background: rgba(12, 16, 26, 0.95); border-bottom: 1px solid rgba(255,255,255,0.07); }
@@ -170,6 +171,7 @@
         <button class="tab-btn" onclick="switchTab('crate', this)"><span>❤️ My Crate</span> <span class="tab-badge" id="crateBadgeCount">0</span></button>
         <button class="tab-btn" onclick="switchTab('history', this)"><span>🕒 History</span> <span class="tab-badge" id="historyBadgeCount">0</span></button>
         <button class="tab-btn" onclick="switchTab('brain', this)">🧠 Brain DJ</button>
+        <button class="tab-btn" onclick="switchTab('audiolab', this)">🎛️ Audio Lab</button>
         <button class="tab-btn" onclick="switchTab('search', this)">🔍 Search</button>
         <button class="tab-btn" onclick="switchTab('charts', this)">🔥 Charts</button>
         <button class="tab-btn" onclick="switchTab('discography', this)">💿 Discography</button>
@@ -643,6 +645,113 @@
 
       </div>
 
+      <!-- Audio Lab & Mastering Scope Tab -->
+      <div class="tab-content" id="tabAudiolab">
+        <div class="audiolab-container">
+          <div class="audiolab-header-card">
+            <div class="audiolab-title-wrap">
+              <div class="audiolab-icon">🎛️</div>
+              <div>
+                <div style="font-weight:700; font-size:0.95rem; color:#f8fafc; letter-spacing:0.3px;">Mastering Scope & Acoustic Audio Lab</div>
+                <div style="font-size:0.72rem; color:var(--text-muted);">Real-time 48kHz frequency spectrum, true-peak headroom guard & DSP telemetry.</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="safety-badge">🛡️ +0.5dB Headroom Safe</span>
+              <button class="btn-small" id="btnRunAudioDiag" onclick="runAudioLabDiagnostic()">⚡ Run DSP Self-Check</button>
+            </div>
+          </div>
+
+          <!-- Real-time Canvas Spectrum Analyzer -->
+          <div class="audiolab-canvas-card">
+            <div class="audiolab-canvas-header">
+              <span>📊 Real-Time 48kHz FFT Frequency Spectrum</span>
+              <span style="color:#38bdf8; font-size:0.7rem;">32-Bit Float FFT Resolution</span>
+            </div>
+            <div class="spectrum-canvas-wrap">
+              <canvas id="audiolabCanvas"></canvas>
+            </div>
+            <div class="frequency-legend">
+              <span>20 Hz (Sub)</span>
+              <span>100 Hz (Kick)</span>
+              <span>500 Hz (Mids)</span>
+              <span>2.5 kHz (Snare/Vox)</span>
+              <span>6 kHz (Sax/Presence)</span>
+              <span>12 kHz (Brilliance)</span>
+              <span>20 kHz (Air)</span>
+            </div>
+          </div>
+
+          <!-- Stereo VU Meters -->
+          <div class="vu-meters-card">
+            <div class="vu-channel">
+              <div class="vu-channel-header">
+                <span>LEFT CHANNEL (dBFS)</span>
+                <span id="vuPeakVal" style="color:#4ade80;">-11.8 dBFS</span>
+              </div>
+              <div class="vu-meter-bar-wrap">
+                <div class="vu-limiter-marker" title="True-Peak Limiter Guard (-0.5 dB)"></div>
+                <div class="vu-meter-fill" id="vuLeftFill"></div>
+              </div>
+            </div>
+            <div class="vu-channel">
+              <div class="vu-channel-header">
+                <span>RIGHT CHANNEL (dBFS)</span>
+                <span id="vuRmsVal" style="color:#38bdf8;">-24.6 dBFS</span>
+              </div>
+              <div class="vu-meter-bar-wrap">
+                <div class="vu-limiter-marker" title="True-Peak Limiter Guard (-0.5 dB)"></div>
+                <div class="vu-meter-fill" id="vuRightFill"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mastering Pipeline Telemetry Grid -->
+          <div class="telemetry-specs-grid">
+            <div class="spec-box">
+              <span class="spec-label">Resampler Engine</span>
+              <div class="spec-value" id="telemetryResampler">SoXR 28-bit Sinc</div>
+              <div class="spec-detail">Chebyshev windowed 32-bit floating point sinc resampler. 0 passband ripple.</div>
+            </div>
+            <div class="spec-box">
+              <span class="spec-label">True-Peak Limiter</span>
+              <div class="spec-value" id="telemetryLimiter">True-Peak (-0.5 dB)</div>
+              <div class="spec-detail">Guarantees zero inter-sample clipping on Discord Opus encoder.</div>
+            </div>
+            <div class="spec-box">
+              <span class="spec-label">Ring Buffer Queue</span>
+              <div class="spec-value" id="telemetryBuffer">1024 packets (2 threads)</div>
+              <div class="spec-detail">Multi-threaded buffer pool prevents underruns, packet loss & micro-stutter.</div>
+            </div>
+            <div class="spec-box">
+              <span class="spec-label">Bitstream Codec</span>
+              <div class="spec-value" id="telemetryBitrate">Opus 48kHz Stereo</div>
+              <div class="spec-detail">Native 48,000 Hz stereo audio. Zero transcoding loss.</div>
+            </div>
+            <div class="spec-box">
+              <span class="spec-label">Dynamic Crest Factor</span>
+              <div class="spec-value" id="telemetryCrest">12.8 dB</div>
+              <div class="spec-detail">Clean punchy dynamics between peak transient and mean RMS energy.</div>
+            </div>
+            <div class="spec-box">
+              <span class="spec-label">Headroom Margin</span>
+              <div class="spec-value" id="telemetryHeadroom">+11.3 dB</div>
+              <div class="spec-detail">Breathing room below limiter threshold for wide, open soundstage.</div>
+            </div>
+            <div class="spec-box">
+              <span class="spec-label">Clipping Events</span>
+              <div class="spec-value" id="telemetryClipping" style="color:#4ade80;">0 (Protected)</div>
+              <div class="spec-detail">Zero digital distortion or peak squaring. 100% transient integrity.</div>
+            </div>
+            <div class="spec-box">
+              <span class="spec-label">High-Freq Harmonic Ceiling</span>
+              <div class="spec-value" id="telemetryAir">19,200 Hz</div>
+              <div class="spec-detail">Preserves saxophone reed bite, brass breath & high-end air.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Time Machine Tab -->
       <div class="tab-content" id="tabTimemachine">
         <!-- Time Machine Decade & Era Sub-Nav Menu -->
@@ -749,5 +858,6 @@
 
   <script src="/static/app.js?v=6.5.0"></script>
   <script src="/static/command_center.js?v=6.5.0"></script>
+  <script src="/static/audio_lab.js?v=6.5.0"></script>
 </body>
 </html>

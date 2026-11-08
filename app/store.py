@@ -9,6 +9,7 @@ import os
 import sqlite3
 import threading
 import time
+from contextlib import contextmanager
 from typing import Any, Optional, Tuple
 
 _ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -18,14 +19,22 @@ _DB_PATH = os.path.join(_DATA_DIR, "cache.db")
 _lock = threading.Lock()
 
 
-def _get_connection() -> sqlite3.Connection:
+@contextmanager
+def _get_connection():
     os.makedirs(_DATA_DIR, exist_ok=True)
     conn = sqlite3.connect(_DB_PATH, timeout=15.0, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA synchronous = NORMAL")
     conn.execute("PRAGMA busy_timeout = 10000")
-    return conn
+    try:
+        with conn:
+            yield conn
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 
 def init_db():
@@ -129,6 +138,16 @@ def init_db():
                 PRIMARY KEY(guild_id, artist)
             )
         """)
+        # 9. Playback History
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS playback_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT NOT NULL,
+                track_json TEXT NOT NULL,
+                played_at REAL NOT NULL
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_playback_history_guild ON playback_history(guild_id, id DESC)")
 
         conn.commit()
 
@@ -429,13 +448,6 @@ def save_guild_settings(guild_id: str, settings: dict):
     if not guild_id or not settings:
         return
     with _lock, _get_connection() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS guild_settings (
-                guild_id TEXT PRIMARY KEY,
-                settings_json TEXT NOT NULL,
-                updated_at REAL NOT NULL
-            )
-        """)
         cursor = conn.cursor()
         cursor.execute("SELECT settings_json FROM guild_settings WHERE guild_id = ?", (str(guild_id),))
         row = cursor.fetchone()
@@ -458,13 +470,6 @@ def load_guild_settings(guild_id: str) -> dict:
     if not guild_id:
         return {}
     with _lock, _get_connection() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS guild_settings (
-                guild_id TEXT PRIMARY KEY,
-                settings_json TEXT NOT NULL,
-                updated_at REAL NOT NULL
-            )
-        """)
         cursor = conn.cursor()
         cursor.execute("SELECT settings_json FROM guild_settings WHERE guild_id = ?", (str(guild_id),))
         row = cursor.fetchone()
@@ -482,14 +487,6 @@ def save_playback_history(guild_id: str, track_data: dict):
         return
     try:
         with _lock, _get_connection() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS playback_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    guild_id TEXT NOT NULL,
-                    track_json TEXT NOT NULL,
-                    played_at REAL NOT NULL
-                )
-            """)
             conn.execute("""
                 INSERT INTO playback_history (guild_id, track_json, played_at)
                 VALUES (?, ?, ?)
@@ -511,14 +508,6 @@ def load_playback_history(guild_id: str, limit: int = 50) -> list:
         return []
     try:
         with _lock, _get_connection() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS playback_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    guild_id TEXT NOT NULL,
-                    track_json TEXT NOT NULL,
-                    played_at REAL NOT NULL
-                )
-            """)
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT track_json, played_at FROM playback_history
@@ -548,14 +537,6 @@ def clear_playback_history(guild_id: str):
         return
     try:
         with _lock, _get_connection() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS playback_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    guild_id TEXT NOT NULL,
-                    track_json TEXT NOT NULL,
-                    played_at REAL NOT NULL
-                )
-            """)
             conn.execute("DELETE FROM playback_history WHERE guild_id = ?", (str(guild_id),))
             conn.commit()
     except Exception as exc:
@@ -719,7 +700,7 @@ def save_taste_vote(guild_id: str, artist: str, score_delta: int) -> int:
     art = str(artist or "").strip().lower()
     if not art:
         return 0
-    with _get_connection() as conn:
+    with _lock, _get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT score FROM taste_profiles WHERE guild_id = ? AND artist = ?", (str(guild_id), art))
         row = cursor.fetchone()
@@ -738,23 +719,23 @@ def save_taste_vote(guild_id: str, artist: str, score_delta: int) -> int:
 def get_taste_scores(guild_id: str) -> dict:
     """Retrieves all persistent artist taste scores for a guild from SQLite."""
     try:
-        with _get_connection() as conn:
+        with _lock, _get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT artist, score FROM taste_profiles WHERE guild_id = ?", (str(guild_id),))
             return {r[0]: r[1] for r in cursor.fetchall()}
     except Exception as e:
-        log.debug(f"Taste profile read notice: {e}")
+        _log.debug(f"Taste profile read notice: {e}")
         return {}
 
 
 def clear_taste_scores(guild_id: str) -> bool:
     """Clear all artist taste scores for a guild from SQLite."""
     try:
-        with _get_connection() as conn:
+        with _lock, _get_connection() as conn:
             conn.cursor().execute("DELETE FROM taste_profiles WHERE guild_id = ?", (str(guild_id),))
             conn.commit()
             return True
     except Exception as e:
-        log.debug(f"Taste profile clear notice: {e}")
+        _log.debug(f"Taste profile clear notice: {e}")
         return False
 

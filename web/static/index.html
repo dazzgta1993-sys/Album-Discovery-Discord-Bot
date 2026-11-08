@@ -719,18 +719,18 @@
           <div class="telemetry-specs-grid">
             <div class="spec-box">
               <span class="spec-label">Resampler Engine</span>
-              <div class="spec-value" id="telemetryResampler">SoXR 28-bit Sinc</div>
-              <div class="spec-detail">Chebyshev windowed 32-bit floating point sinc resampler. 0 passband ripple.</div>
+              <div class="spec-value" id="telemetryResampler">Low-Latency 48kHz Sinc</div>
+              <div class="spec-detail">Zero phase-delay linear resampling. Immune to network jitter.</div>
             </div>
             <div class="spec-box">
-              <span class="spec-label">True-Peak Limiter</span>
-              <div class="spec-value" id="telemetryLimiter">True-Peak (-0.5 dB)</div>
-              <div class="spec-detail">Guarantees zero inter-sample clipping on Discord Opus encoder.</div>
+              <span class="spec-label">Headroom Guard</span>
+              <div class="spec-value" id="telemetryLimiter">True-Peak Guard (-0.45 dB)</div>
+              <div class="spec-detail">Dedicated ceiling margin prevents inter-sample clipping on Discord Opus encoder.</div>
             </div>
             <div class="spec-box">
-              <span class="spec-label">Ring Buffer Queue</span>
-              <div class="spec-value" id="telemetryBuffer">1024 packets (2 threads)</div>
-              <div class="spec-detail">Multi-threaded buffer pool prevents underruns, packet loss & micro-stutter.</div>
+              <span class="spec-label">Stream Buffer Flow</span>
+              <div class="spec-value" id="telemetryBuffer">Direct Stream Flow</div>
+              <div class="spec-detail">Real-time packet pacing eliminates speed-warping, crackles, and buffer underruns.</div>
             </div>
             <div class="spec-box">
               <span class="spec-label">Bitstream Codec</span>

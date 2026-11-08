@@ -226,9 +226,9 @@ function applyAudioLabTelemetry(t) {
   if (!t) return;
   const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
-  setEl("telemetryResampler", t.resampler || "SoXR 28-bit Sinc");
-  setEl("telemetryLimiter", t.limiter || "True-Peak (-0.5 dB)");
-  setEl("telemetryBuffer", t.buffer || "1024 packets (2 threads)");
+  setEl("telemetryResampler", t.resampler || "Low-Latency 48kHz Sinc");
+  setEl("telemetryLimiter", t.limiter || "True-Peak Guard (-0.45 dB)");
+  setEl("telemetryBuffer", t.buffer || "Direct Stream Flow");
   setEl("telemetryBitrate", t.bitrate || "Opus 48kHz Stereo");
   setEl("telemetryCrest", (t.crest_factor_db || 12.8) + " dB");
   setEl("telemetryHeadroom", (t.headroom_margin_db || "+11.3") + " dB");

@@ -2,6 +2,15 @@ import asyncio
 import os
 import sys
 
+# Ensure project root is in sys.path
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+from core.logger import get_bot_logger, configure_discord_logging
+configure_discord_logging()
+log = get_bot_logger("bot")
+
 # Windows Console UTF-8 Guardrail: Prevent charmap UnicodeEncodeErrors on emojis and international artist names
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
     try:
@@ -16,11 +25,6 @@ if sys.stderr and hasattr(sys.stderr, "reconfigure"):
 
 import discord
 from discord.ext import commands
-
-# Ensure project root is in sys.path
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-if ROOT_DIR not in sys.path:
-    sys.path.insert(0, ROOT_DIR)
 
 # Auto-load Opus DLL on Windows for voice playback
 from discord import opus
@@ -39,11 +43,7 @@ if not opus.is_loaded():
                 log.debug(f'Bot notice: {_ex}')
 
 from core.config import BOT_TOKEN, COMMAND_PREFIX, WEB_ENABLED, WEB_HOST, WEB_PORT
-from core.logger import get_bot_logger, configure_discord_logging
 from core.player import PlayerManager
-
-configure_discord_logging()
-log = get_bot_logger("bot")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -89,7 +89,10 @@ class AlbumDiscoveryBot(commands.Bot):
                 from web.server import start_web_server
                 self._web_runner = await start_web_server(self, host=WEB_HOST, port=WEB_PORT)
             except Exception as e:
-                log.error(f"Failed to start Web Control Hub: {e}")
+                log.critical(f"Failed to start Web Control Hub on port {WEB_PORT}: {e}")
+                log.critical("Port conflict detected. Terminating process to prevent ghost bot conflicts.")
+                await self.close()
+                sys.exit(1)
 
         web_url = f"http://localhost:{WEB_PORT}" if WEB_HOST in ("0.0.0.0", "127.0.0.1") else f"http://{WEB_HOST}:{WEB_PORT}"
 
@@ -195,7 +198,32 @@ class AlbumDiscoveryBot(commands.Bot):
         await super().close()
 
 
+def ensure_single_instance():
+    """Guarantee only one instance of bot.py runs, preventing duplicate ghost processes."""
+    try:
+        import psutil
+        my_pid = os.getpid()
+        parent_pid = os.getppid() if hasattr(os, "getppid") else None
+        for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+            try:
+                p_id = proc.pid
+                if p_id in (my_pid, parent_pid):
+                    continue
+                name = (proc.info.get("name") or "").lower()
+                if "python" in name:
+                    cmd = proc.info.get("cmdline") or []
+                    if any("bot.py" in str(arg) for arg in cmd) and not any("-c" in str(arg) for arg in cmd):
+                        log.warning(f"Found lingering bot instance (PID {p_id}). Terminating it to prevent ghost conflicts...")
+                        proc.kill()
+                        proc.wait(timeout=2)
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
+                pass
+    except Exception as _ex:
+        log.debug(f"Single-instance check notice: {_ex}")
+
+
 def main():
+    ensure_single_instance()
     token = BOT_TOKEN.strip()
     if not token or token == "your_token_here":
         print("\n" + "=" * 65)

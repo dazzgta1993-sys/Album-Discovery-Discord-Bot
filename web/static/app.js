@@ -205,11 +205,6 @@ async function pollGuildState(guildId) {
     const btnPlay = document.getElementById("btnPlayPause");
     btnPlay.innerText = (isPlaying && !isPaused) ? "⏸" : "▶";
     const coverImg = document.getElementById("trackCover");
-    const placeholder = document.getElementById("coverPlaceholder");
-    if (placeholder) {
-      placeholder.style.display = "none";
-      try { placeholder.remove(); } catch (e) {}
-    }
     if (p.current_track) {
       document.getElementById("trackTitle").innerText = p.current_track.title || "Unknown";
       document.getElementById("trackArtist").innerText = p.current_track.artist || "Unknown";
@@ -319,26 +314,17 @@ async function pollGuildState(guildId) {
       if (b.deck2_enabled !== undefined) {
         currentBrainConfig.deck2_enabled = b.deck2_enabled;
         const d2Btn = document.getElementById("btnDeck2Toggle");
-        if (d2Btn) {
-          d2Btn.innerHTML = b.deck2_enabled ? "⚡ Deck 2: ON" : "Deck 2: OFF";
-          d2Btn.style.color = b.deck2_enabled ? "#4ade80" : "var(--text-muted)";
-        }
+        if (d2Btn) { d2Btn.innerHTML = b.deck2_enabled ? "⚡ Deck 2: ON" : "Deck 2: OFF"; d2Btn.style.color = b.deck2_enabled ? "#4ade80" : "var(--text-muted)"; }
       }
       if (b.deck3_enabled !== undefined) {
         currentBrainConfig.deck3_enabled = b.deck3_enabled;
         const d3Btn = document.getElementById("btnDeck3Toggle");
-        if (d3Btn) {
-          d3Btn.innerHTML = b.deck3_enabled ? "🎛️ Deck 3: ON" : "Deck 3: OFF";
-          d3Btn.style.color = b.deck3_enabled ? "#38bdf8" : "var(--text-muted)";
-        }
+        if (d3Btn) { d3Btn.innerHTML = b.deck3_enabled ? "🎛️ Deck 3: ON" : "Deck 3: OFF"; d3Btn.style.color = b.deck3_enabled ? "#38bdf8" : "var(--text-muted)"; }
       }
       if (b.startup_autoplay !== undefined) {
         currentBrainConfig.startup_autoplay = b.startup_autoplay;
         const saBtn = document.getElementById("btnStartupAutoplayToggle");
-        if (saBtn) {
-          saBtn.innerHTML = b.startup_autoplay ? "🚀 Startup Auto-Play: ON" : "Startup Auto-Play: OFF";
-          saBtn.style.color = b.startup_autoplay ? "#4ade80" : "var(--text-muted)";
-        }
+        if (saBtn) { saBtn.innerHTML = b.startup_autoplay ? "🚀 Startup Auto-Play: ON" : "Startup Auto-Play: OFF"; saBtn.style.color = b.startup_autoplay ? "#4ade80" : "var(--text-muted)"; }
       }
       if (b.explicit_filter) { currentBrainConfig.explicit_filter = b.explicit_filter; setPillActive("exp", b.explicit_filter); }
       if (b.artist_cooldown !== undefined) { currentBrainConfig.artist_cooldown = b.artist_cooldown; setPillActive("cooldown", b.artist_cooldown); }
@@ -453,20 +439,14 @@ function selectEngineSource(source) {
 function toggleDeck2Pref() {
   currentBrainConfig.deck2_enabled = !currentBrainConfig.deck2_enabled;
   const btn = document.getElementById("btnDeck2Toggle");
-  if (btn) {
-    btn.innerHTML = currentBrainConfig.deck2_enabled ? "⚡ Deck 2: ON" : "Deck 2: OFF";
-    btn.style.color = currentBrainConfig.deck2_enabled ? "#4ade80" : "var(--text-muted)";
-  }
+  if (btn) { btn.innerHTML = currentBrainConfig.deck2_enabled ? "⚡ Deck 2: ON" : "Deck 2: OFF"; btn.style.color = currentBrainConfig.deck2_enabled ? "#4ade80" : "var(--text-muted)"; }
   sendBrainConfig({ deck2_enabled: currentBrainConfig.deck2_enabled });
   showToast("Deck 2 Preload: " + (currentBrainConfig.deck2_enabled ? "ENABLED ⚡" : "DISABLED"), "⚡");
 }
 function toggleDeck3Pref() {
   currentBrainConfig.deck3_enabled = !currentBrainConfig.deck3_enabled;
   const btn = document.getElementById("btnDeck3Toggle");
-  if (btn) {
-    btn.innerHTML = currentBrainConfig.deck3_enabled ? "🎛️ Deck 3: ON" : "Deck 3: OFF";
-    btn.style.color = currentBrainConfig.deck3_enabled ? "#38bdf8" : "var(--text-muted)";
-  }
+  if (btn) { btn.innerHTML = currentBrainConfig.deck3_enabled ? "🎛️ Deck 3: ON" : "Deck 3: OFF"; btn.style.color = currentBrainConfig.deck3_enabled ? "#38bdf8" : "var(--text-muted)"; }
   sendBrainConfig({ deck3_enabled: currentBrainConfig.deck3_enabled });
   showToast("Deck 3 Pipeline: " + (currentBrainConfig.deck3_enabled ? "ENABLED 🎛️" : "DISABLED"), "🎛️");
 }
@@ -489,10 +469,7 @@ function handleCoverError(img) {
 function toggleStartupAutoplayPref() {
   currentBrainConfig.startup_autoplay = !currentBrainConfig.startup_autoplay;
   const btn = document.getElementById("btnStartupAutoplayToggle");
-  if (btn) {
-    btn.innerHTML = currentBrainConfig.startup_autoplay ? "🚀 Startup Auto-Play: ON" : "Startup Auto-Play: OFF";
-    btn.style.color = currentBrainConfig.startup_autoplay ? "#4ade80" : "var(--text-muted)";
-  }
+  if (btn) { btn.innerHTML = currentBrainConfig.startup_autoplay ? "🚀 Startup Auto-Play: ON" : "Startup Auto-Play: OFF"; btn.style.color = currentBrainConfig.startup_autoplay ? "#4ade80" : "var(--text-muted)"; }
   sendBrainConfig({ startup_autoplay: currentBrainConfig.startup_autoplay });
   showToast("Startup Auto-Play: " + (currentBrainConfig.startup_autoplay ? "ENABLED 🚀" : "DISABLED"), "🚀");
 }
@@ -523,13 +500,7 @@ function renderQueue(queue, count) {
 <div style="font-size:0.8rem; color:var(--text-muted)">Use Search or Trending Charts to add tracks!</div> </div> `;
     return;
   }
-  list.innerHTML = queue.map((t, idx) => ` <div class="track-item">
-<span style="font-weight:700; color:var(--text-muted); font-size:0.8rem; width:20px;">#${idx + 1}</span>
-<img class="track-thumb" referrerpolicy="no-referrer" src="${t.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
-<div class="track-info-col"> <span class="item-title">${escapeHtml(t.title)}</span>
-<span class="item-artist">${escapeHtml(t.artist)} • ${t.duration || '--:--'}</span> </div> <div class="track-action-btns">
-${idx > 0 ? `<button class="btn-small" title="Move Up" onclick="moveQueueItem(${idx}, ${idx - 1})">▲</button>` : ''} ${idx < queue.length - 1 ? `<button class="btn-small" title="Move Down" onclick="moveQueueItem(${idx}, ${idx + 1})">▼</button>` : ''} <button class="btn-small" title="Play Now" onclick="queuePlayNow(${idx})">▶</button>
-<button class="btn-small btn-danger" title="Remove" onclick="removeQueueItem(${idx})">✕</button> </div> </div> `).join('');
+  list.innerHTML = queue.map((t, idx) => `<div class="track-item"><span style="font-weight:700; color:var(--text-muted); font-size:0.8rem; width:20px;">#${idx + 1}</span><img class="track-thumb" referrerpolicy="no-referrer" src="${t.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" /><div class="track-info-col"><span class="item-title">${escapeHtml(t.title)}</span><span class="item-artist">${escapeHtml(t.artist)} • ${t.duration || '--:--'}</span></div><div class="track-action-btns">${idx > 0 ? `<button class="btn-small" title="Move Up" onclick="moveQueueItem(${idx}, ${idx - 1})">▲</button>` : ''} ${idx < queue.length - 1 ? `<button class="btn-small" title="Move Down" onclick="moveQueueItem(${idx}, ${idx + 1})">▼</button>` : ''} <button class="btn-small" title="Play Now" onclick="queuePlayNow(${idx})">▶</button><button class="btn-small btn-danger" title="Remove" onclick="removeQueueItem(${idx})">✕</button></div></div>`).join('');
 }
 
 function formatTimeAgo(ts) {
@@ -564,19 +535,7 @@ function renderHistory(history) {
     const metaParts = [escapeHtml(t.artist)];
     if (dur) metaParts.push(dur);
     if (timeTag) metaParts.push(timeTag);
-    return ` <div class="track-item">
-<span style="font-weight:700; color:var(--text-muted); font-size:0.8rem; width:22px;">#${idx + 1}</span>
-<img class="track-thumb" referrerpolicy="no-referrer" src="${t.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
-<div class="track-info-col">
-  <span class="item-title">${escapeHtml(t.title)}</span>
-  <span class="item-artist">${metaParts.join(' • ')} • <span class="tag-badge">${(t.source || 'PLAYED').toUpperCase()}</span></span>
-</div>
-<div class="track-action-btns">
-  <button class="btn-small" title="Save to My Crate" data-tid="${tid}" onclick="handleTrackBtn(this, 'crate')">❤️</button>
-  <button class="btn-small" title="Replay Now" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Replay</button>
-  <button class="btn-small" title="Queue Again" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">+ Queue</button>
-</div>
-</div> `;
+    return `<div class="track-item"><span style="font-weight:700; color:var(--text-muted); font-size:0.8rem; width:22px;">#${idx + 1}</span><img class="track-thumb" referrerpolicy="no-referrer" src="${t.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" /><div class="track-info-col"><span class="item-title">${escapeHtml(t.title)}</span><span class="item-artist">${metaParts.join(' • ')} • <span class="tag-badge">${(t.source || 'PLAYED').toUpperCase()}</span></span></div><div class="track-action-btns"><button class="btn-small" title="Save to My Crate" data-tid="${tid}" onclick="handleTrackBtn(this, 'crate')">❤️</button><button class="btn-small" title="Replay Now" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Replay</button><button class="btn-small" title="Queue Again" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">+ Queue</button></div></div>`;
   }).join('');
 }
 let unlockerArmed = false;
@@ -594,14 +553,10 @@ function armAutoplayUnlocker() {
         }
       }).catch(e => console.warn("Audio unlock notice:", e));
     }
-    window.removeEventListener("click", unlock);
-    window.removeEventListener("keydown", unlock);
-    window.removeEventListener("pointerdown", unlock);
+    ["click", "keydown", "pointerdown"].forEach(ev => window.removeEventListener(ev, unlock));
     unlockerArmed = false;
   };
-  window.addEventListener("click", unlock, { once: true });
-  window.addEventListener("keydown", unlock, { once: true });
-  window.addEventListener("pointerdown", unlock, { once: true });
+  ["click", "keydown", "pointerdown"].forEach(ev => window.addEventListener(ev, unlock, { once: true }));
 }
 
 function toggleAudioMonitor() {
@@ -745,11 +700,7 @@ function toggleMute() {
 async function joinSelectedVoice() {
   const select = document.getElementById("quickVcSelect");
   if (!select || !select.value) return;
-  await fetch("/api/guild/" + currentGuildId + "/control", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "join_voice", channel_id: select.value })
-  });
+  await fetch("/api/guild/" + currentGuildId + "/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "join_voice", channel_id: select.value }) });
   showToast("Joined voice channel 🔊");
   setTimeout(() => pollGuildState(currentGuildId), 600);
 }
@@ -789,26 +740,10 @@ async function executeSearch() {
       if (r.is_album) {
         const safeAid = String(r.id || idx).replace(/[^a-zA-Z0-9_-]/g, "_");
         const tracksTxt = r.tracks_count ? `${r.tracks_count} tracks` : "Full Album";
-        return ` <div class="album-item-container"> <div class="album-card-item">
-<img class="album-card-thumb" referrerpolicy="no-referrer" src="${r.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
-<div class="track-info-col"> <span class="item-title" style="font-size:0.95rem; font-weight:700;">${escapeHtml(r.title)}</span>
-<span class="item-artist">${escapeHtml(r.artist)} • <span class="album-badge">💿 ${r.record_type || 'ALBUM'}</span> • <span style="color:#c77dff; font-weight:600;">${tracksTxt}</span></span>
-</div> <div class="track-action-btns">
-<button class="btn-small btn-view-tracks" id="btnTracks-search-${idx}-${safeAid}" data-album-id="${escapeHtml(String(r.id || ''))}" data-title="${escapeHtml(r.title)}" data-artist="${escapeHtml(r.artist)}" onclick="toggleAlbumTracks(this)">📋 View Tracklist</button>
-<button class="btn-small" style="background:var(--accent-purple); color:#fff;" data-album-id="${escapeHtml(String(r.id || ''))}" data-title="${escapeHtml(r.title)}" data-artist="${escapeHtml(r.artist)}" onclick="queueAlbumDirect(this, true)">▶ Play Full LP</button>
-<button class="btn-small" data-album-id="${escapeHtml(String(r.id || ''))}" data-title="${escapeHtml(r.title)}" data-artist="${escapeHtml(r.artist)}" onclick="queueAlbumDirect(this, false)">+ Add LP</button>
-</div> </div> <div class="album-tracks-tray" id="tray-search-${idx}-${safeAid}" style="display:none;"></div> </div> `;
+        return `<div class="album-item-container"><div class="album-card-item"><img class="album-card-thumb" referrerpolicy="no-referrer" src="${r.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" /><div class="track-info-col"><span class="item-title" style="font-size:0.95rem; font-weight:700;">${escapeHtml(r.title)}</span><span class="item-artist">${escapeHtml(r.artist)} • <span class="album-badge">💿 ${r.record_type || 'ALBUM'}</span> • <span style="color:#c77dff; font-weight:600;">${tracksTxt}</span></span></div><div class="track-action-btns"><button class="btn-small btn-view-tracks" id="btnTracks-search-${idx}-${safeAid}" data-album-id="${escapeHtml(String(r.id || ''))}" data-title="${escapeHtml(r.title)}" data-artist="${escapeHtml(r.artist)}" onclick="toggleAlbumTracks(this)">📋 View Tracklist</button><button class="btn-small" style="background:var(--accent-purple); color:#fff;" data-album-id="${escapeHtml(String(r.id || ''))}" data-title="${escapeHtml(r.title)}" data-artist="${escapeHtml(r.artist)}" onclick="queueAlbumDirect(this, true)">▶ Play Full LP</button><button class="btn-small" data-album-id="${escapeHtml(String(r.id || ''))}" data-title="${escapeHtml(r.title)}" data-artist="${escapeHtml(r.artist)}" onclick="queueAlbumDirect(this, false)">+ Add LP</button></div></div><div class="album-tracks-tray" id="tray-search-${idx}-${safeAid}" style="display:none;"></div></div>`;
       }
       const tid = registerTrackRef(r);
-      return ` <div class="track-item">
-<img class="track-thumb" referrerpolicy="no-referrer" src="${r.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
-<div class="track-info-col"> <span class="item-title">${escapeHtml(r.title)}</span>
-<span class="item-artist">${escapeHtml(r.artist)} • ${r.duration} • <span class="tag-badge">${r.source.toUpperCase()}</span></span>
-</div> <div class="track-action-btns">
-<button class="btn-small" title="Save to My Crate" data-tid="${tid}" onclick="handleTrackBtn(this, 'crate')">❤️</button>
-<button class="btn-small" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Play Now</button>
-<button class="btn-small" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">+ Queue</button> </div>
-</div> `;
+      return `<div class="track-item"><img class="track-thumb" referrerpolicy="no-referrer" src="${r.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" /><div class="track-info-col"><span class="item-title">${escapeHtml(r.title)}</span><span class="item-artist">${escapeHtml(r.artist)} • ${r.duration} • <span class="tag-badge">${r.source.toUpperCase()}</span></span></div><div class="track-action-btns"><button class="btn-small" title="Save to My Crate" data-tid="${tid}" onclick="handleTrackBtn(this, 'crate')">❤️</button><button class="btn-small" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Play Now</button><button class="btn-small" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">+ Queue</button></div></div>`;
     }).join('');
   } catch (e) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>Search failed. Please try again.</div></div>`;
@@ -880,12 +815,7 @@ async function loadCharts(forceRefresh = false) {
         actions = ` <button class="btn-small" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Play</button>
 <button class="btn-small" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">➕ Add</button> `;
       }
-      return ` <div class="track-item">
-<span style="font-weight:800; color:#c77dff; font-size:0.9rem; width:28px;">#${c.position || i + 1}</span>
-<img class="track-thumb" referrerpolicy="no-referrer" src="${c.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" />
-<div class="track-info-col"> <span class="item-title">${escapeHtml(c.title)}</span>
-<span class="item-artist">${escapeHtml(c.artist)}${durText}</span> </div> <div class="track-action-btns"> ${actions} </div> </div>
-`;
+      return `<div class="track-item"><span style="font-weight:800; color:#c77dff; font-size:0.9rem; width:28px;">#${c.position || i + 1}</span><img class="track-thumb" referrerpolicy="no-referrer" src="${c.cover || ALBUM_PLACEHOLDER_SVG}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" /><div class="track-info-col"><span class="item-title">${escapeHtml(c.title)}</span><span class="item-artist">${escapeHtml(c.artist)}${durText}</span></div><div class="track-action-btns">${actions}</div></div>`;
     }).join('');
   } catch (e) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>Failed to load charts.</div></div>`;
@@ -928,9 +858,7 @@ async function clearLogsUI() {
       if (pre) pre.innerText = "No log entries recorded yet.";
       showToast("Diagnostic logs cleared", "🗑️");
     }
-  } catch (e) {
-    showToast("Failed to clear logs", "⚠️");
-  }
+  } catch (e) { showToast("Failed to clear logs", "⚠️"); }
 }
 
 function escapeHtml(str) {
@@ -960,10 +888,7 @@ async function executeDiscographySearch() {
     }
     if (header) {
       const stats = Object.entries(data.counts || {}).map(([k, v]) => `<strong>${k}:</strong> ${v}`).join(" • ");
-      header.innerHTML = `
-<div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.03); padding:10px 14px; border-radius:var(--radius-md); border:1px solid var(--border-color);">
-${data.picture ? `<img src="${data.picture}" style="width:44px; height:44px; border-radius:50%; object-fit:cover;" onerror="this.style.display='none';" />` : ''} <div> <div style="font-weight:700; font-size:1rem; color:var(--text-bright);">${escapeHtml(data.artist)}</div>
-<div style="font-size:0.75rem; color:var(--text-muted);">${stats || 'Classified Catalog'}</div> </div> </div> `;
+      header.innerHTML = `<div style="display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.03); padding:10px 14px; border-radius:var(--radius-md); border:1px solid var(--border-color);">${data.picture ? `<img src="${data.picture}" style="width:44px; height:44px; border-radius:50%; object-fit:cover;" onerror="this.style.display='none';" />` : ''}<div><div style="font-weight:700; font-size:1rem; color:var(--text-bright);">${escapeHtml(data.artist)}</div><div style="font-size:0.75rem; color:var(--text-muted);">${stats || 'Classified Catalog'}</div></div></div>`;
     }
 
     const filterEl = document.getElementById("discoCategoryFilter");
@@ -1014,15 +939,7 @@ function renderDiscographyAlbums() {
     const coverSrc = (a.cover && a.cover.trim() && !a.cover.includes("coverartarchive.org")) ? a.cover : ALBUM_PLACEHOLDER_SVG;
     const safeAid = String(a.id || idx).replace(/[^a-zA-Z0-9_-]/g, "_");
     const isLP = cat === "Studio Albums";
-    return ` <div class="album-item-container"> <div class="album-card-item">
-<img class="album-card-thumb" referrerpolicy="no-referrer" src="${coverSrc}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" alt="" />
-<div class="track-info-col"> <span class="item-title" style="font-size:0.95rem; font-weight:700;">${escapeHtml(a.title)} ${yr ? `<span style="color:var(--text-muted); font-size:0.8rem; font-weight:500;">(${yr})</span>` : ''}</span>
-<span class="item-artist">${escapeHtml(a.artist || currentDiscographyData.artist)} • <span class="album-badge">${isLP ? '💿 ' : ''}${cat}</span> • <span style="color:#c77dff; font-weight:600;">${tracks ? tracks + ' tracks' : 'Full Release'}</span></span>
-</div> <div class="track-action-btns">
-<button class="btn-small btn-view-tracks" id="btnTracks-${idx}-${safeAid}" data-album-id="${escapeHtml(String(a.id || ''))}" data-title="${escapeHtml(a.title)}" data-artist="${escapeHtml(a.artist || currentDiscographyData.artist)}" onclick="toggleAlbumTracks(this)">📋 View Tracklist</button>
-<button class="btn-small" style="background:var(--accent-purple); color:#fff;" data-album-id="${escapeHtml(String(a.id || ''))}" data-title="${escapeHtml(a.title)}" data-artist="${escapeHtml(a.artist || currentDiscographyData.artist)}" onclick="queueAlbumDirect(this, true)">▶ Play Release</button>
-<button class="btn-small" data-album-id="${escapeHtml(String(a.id || ''))}" data-title="${escapeHtml(a.title)}" data-artist="${escapeHtml(a.artist || currentDiscographyData.artist)}" onclick="queueAlbumDirect(this, false)">+ Add Release</button>
-</div> </div> <div class="album-tracks-tray" id="tray-disco-${idx}-${safeAid}" style="display:none;"></div> </div> `;
+    return `<div class="album-item-container"><div class="album-card-item"><img class="album-card-thumb" referrerpolicy="no-referrer" src="${coverSrc}" onerror="this.onerror=null; this.src='${ALBUM_PLACEHOLDER_SVG}';" alt="" /><div class="track-info-col"><span class="item-title" style="font-size:0.95rem; font-weight:700;">${escapeHtml(a.title)} ${yr ? `<span style="color:var(--text-muted); font-size:0.8rem; font-weight:500;">(${yr})</span>` : ''}</span><span class="item-artist">${escapeHtml(a.artist || currentDiscographyData.artist)} • <span class="album-badge">${isLP ? '💿 ' : ''}${cat}</span> • <span style="color:#c77dff; font-weight:600;">${tracks ? tracks + ' tracks' : 'Full Release'}</span></span></div><div class="track-action-btns"><button class="btn-small btn-view-tracks" id="btnTracks-${idx}-${safeAid}" data-album-id="${escapeHtml(String(a.id || ''))}" data-title="${escapeHtml(a.title)}" data-artist="${escapeHtml(a.artist || currentDiscographyData.artist)}" onclick="toggleAlbumTracks(this)">📋 View Tracklist</button><button class="btn-small" style="background:var(--accent-purple); color:#fff;" data-album-id="${escapeHtml(String(a.id || ''))}" data-title="${escapeHtml(a.title)}" data-artist="${escapeHtml(a.artist || currentDiscographyData.artist)}" onclick="queueAlbumDirect(this, true)">▶ Play Release</button><button class="btn-small" data-album-id="${escapeHtml(String(a.id || ''))}" data-title="${escapeHtml(a.title)}" data-artist="${escapeHtml(a.artist || currentDiscographyData.artist)}" onclick="queueAlbumDirect(this, false)">+ Add Release</button></div></div><div class="album-tracks-tray" id="tray-disco-${idx}-${safeAid}" style="display:none;"></div></div>`;
   }).join('');
 }
 

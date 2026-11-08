@@ -118,27 +118,20 @@ class GuildPlayer:
                 self.history.append(t)
             saved = store.load_guild_settings(str(self.guild.id))
             if saved:
-                if "vibe_mode" in saved: self.vibe_mode = str(saved["vibe_mode"])
-                if "vibe_drift_freq" in saved: self.vibe_drift_freq = int(saved["vibe_drift_freq"])
-                if "hit_depth" in saved: self.hit_depth = str(saved["hit_depth"])
-                if "deck2_enabled" in saved: self.deck2_enabled = bool(saved["deck2_enabled"])
-                if "deck3_enabled" in saved: self.deck3_enabled = bool(saved["deck3_enabled"])
-                if "startup_autoplay" in saved: self.startup_autoplay = bool(saved["startup_autoplay"])
-                if "explicit_filter" in saved: self.explicit_filter = str(saved["explicit_filter"])
-                if "artist_cooldown" in saved: self.artist_cooldown = int(saved["artist_cooldown"])
-                if "era_filter" in saved: self.era_filter = str(saved["era_filter"])
-                if "vibe_energy" in saved: self.vibe_energy = str(saved["vibe_energy"])
-                if "vibe_engine_source" in saved: self.vibe_engine_source = str(saved["vibe_engine_source"])
-                if "autoplay" in saved: self.autoplay = bool(saved["autoplay"])
-                if "audio_quality" in saved and str(saved["audio_quality"]) in ("auto", "128k", "192k", "320k"):
+                for k in ("vibe_mode", "hit_depth", "explicit_filter", "era_filter", "vibe_energy", "vibe_engine_source"):
+                    if k in saved: setattr(self, k, str(saved[k]))
+                for k in ("vibe_drift_freq", "artist_cooldown"):
+                    if k in saved: setattr(self, k, int(saved[k]))
+                for k in ("deck2_enabled", "deck3_enabled", "startup_autoplay", "autoplay", "is_anchor_locked"):
+                    if k in saved: setattr(self, k, bool(saved[k]))
+                if str(saved.get("audio_quality", "")) in ("auto", "128k", "192k", "320k"):
                     self.audio_quality = str(saved["audio_quality"])
-                if "loop_mode" in saved and str(saved["loop_mode"]) in ("off", "track", "queue"):
+                if str(saved.get("loop_mode", "")) in ("off", "track", "queue"):
                     self.loop_mode = str(saved["loop_mode"])
                 if "volume" in saved:
                     try: self.volume = max(0.0, min(1.0, float(saved["volume"])))
                     except Exception as _ex: log.debug(f'Player setting notice: {_ex}')
-                if "is_anchor_locked" in saved: self.is_anchor_locked = bool(saved["is_anchor_locked"])
-                if "vibe_anchor_artist" in saved and saved["vibe_anchor_artist"]: self.vibe_anchor_artist = str(saved["vibe_anchor_artist"])
+                if saved.get("vibe_anchor_artist"): self.vibe_anchor_artist = str(saved["vibe_anchor_artist"])
         except Exception as _ex:
             log.debug(f'Player notice: {_ex}')
         self.last_brain_decision: str = "Brain System Online • Standby"
@@ -678,7 +671,18 @@ class GuildPlayer:
         if not track:
             return
         if track.video_id and (track.source == "youtube" or track.artist in ("YouTube", "YouTube Search", "Direct Query")):
-            meta = stream_service.get_video_metadata(track.video_id)
+            asyncio.create_task(self._enrich_youtube_metadata_async(track))
+
+        # Universal High-Resolution Studio Artwork Resolver (Offloaded to background async worker so event loop never stalls)
+        if not track.cover_url or "coverartarchive.org" in track.cover_url or "ytimg.com" in track.cover_url or not track.duration_seconds or track.duration_seconds <= 0:
+            clean_art = track.artist.strip() if track.artist not in ("YouTube", "YouTube Search", "Direct Query") else ""
+            query = f"{clean_art} {track.title}".strip()
+            if query:
+                asyncio.create_task(self._fetch_studio_artwork_async(track, query, clean_art))
+
+    async def _enrich_youtube_metadata_async(self, track: AudioTrack):
+        try:
+            meta = await asyncio.to_thread(stream_service.get_video_metadata, track.video_id)
             if meta:
                 raw_title = meta.get("title") or track.title
                 if " - " in raw_title:
@@ -700,13 +704,9 @@ class GuildPlayer:
                         track.duration_str = AudioTrack._format_duration(dur)
                     except Exception as _ex:
                         log.debug(f'Player notice: {_ex}')
-
-        # Universal High-Resolution Studio Artwork Resolver (Offloaded to background async worker so event loop never stalls)
-        if not track.cover_url or "coverartarchive.org" in track.cover_url or "ytimg.com" in track.cover_url or not track.duration_seconds or track.duration_seconds <= 0:
-            clean_art = track.artist.strip() if track.artist not in ("YouTube", "YouTube Search", "Direct Query") else ""
-            query = f"{clean_art} {track.title}".strip()
-            if query:
-                asyncio.create_task(self._fetch_studio_artwork_async(track, query, clean_art))
+                await self.update_player_message()
+        except Exception as _ex:
+            log.debug(f'Player notice: {_ex}')
 
     async def _fetch_studio_artwork_async(self, track: AudioTrack, query: str, clean_art: str):
         try:
@@ -953,20 +953,20 @@ class GuildPlayer:
         profile = record_taste_feedback(self.guild.id, artist, title, vote)
         if vote == "down":
             art_lower = str(artist or "").strip().lower()
+            re_prewarm = False
             if self._prewarmed_autoplay_track and str(self._prewarmed_autoplay_track.artist).strip().lower() == art_lower:
                 self._prewarmed_autoplay_track = None
-                self._prewarm_task = None
-                self._schedule_prewarm_next(delay=0.1)
+                re_prewarm = True
             if self._deck3_autoplay_track and str(self._deck3_autoplay_track.artist).strip().lower() == art_lower:
                 self._deck3_autoplay_track = None
-                self._schedule_deck3_cue(delay=0.5)
+                re_prewarm = True
+            if re_prewarm:
+                asyncio.create_task(self._prewarm_next_track())
         return profile
 
     async def disconnect(self):
         self.stop()
         self._cancel_idle_timer()
-        self._prewarmed_autoplay_track = None
-        self._deck3_autoplay_track = None
         if self.voice_client:
             try:
                 await self.voice_client.disconnect(force=True)

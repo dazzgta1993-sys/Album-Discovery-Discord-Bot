@@ -215,6 +215,7 @@ async function fetchAudioLabTelemetry() {
     const res = await fetch(`/api/guild/${guildId}/telemetry`);
     if (!res.ok) return;
     const data = await res.json();
+    console.log("[AudioLab Telemetry Live]", data);
     applyAudioLabTelemetry(data);
   } catch (err) {
     console.debug("Telemetry sync:", err.message);

@@ -750,8 +750,8 @@ def get_sonic_sister_albums(details: dict) -> list[dict]:
                     break
                 ra_id = str(ra.get("id") or "")
                 ra_name = ra.get("name") or ""
-                disc = deezer_api.get_artist_albums(ra_id, limit=2)
-                for alb in (disc.get("albums") or []):
+                disc = deezer_api.get_artist_discography(ra_id, limit=2)
+                for alb in (disc or []):
                     salb_id = str(alb.get("id") or "")
                     if salb_id and salb_id not in seen_ids:
                         seen_ids.add(salb_id)

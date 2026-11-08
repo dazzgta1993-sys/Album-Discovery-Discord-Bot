@@ -268,6 +268,23 @@ def set_api_cache(url: str, data: Any, ttl_seconds: int = 1800, namespace: str =
         _log.error(f"api_cache set error for {url}: {exc}")
 
 
+def clear_cache(clear_all: bool = False):
+    """Clear expired or all entries in the api_cache and stream cache tables."""
+    now = time.time()
+    try:
+        with _lock, _get_connection() as conn:
+            cursor = conn.cursor()
+            if clear_all:
+                cursor.execute("DELETE FROM api_cache")
+                cursor.execute("DELETE FROM stream_resolutions")
+            else:
+                cursor.execute("DELETE FROM api_cache WHERE expires_at < ?", (now,))
+                cursor.execute("DELETE FROM stream_resolutions WHERE expires_at < ?", (now,))
+            conn.commit()
+    except Exception as exc:
+        _log.error(f"clear_cache error: {exc}")
+
+
 # -------------------------------------------------------------
 # STREAM RESOLUTION CACHE
 # -------------------------------------------------------------

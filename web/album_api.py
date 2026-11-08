@@ -155,35 +155,46 @@ async def static_cache_control_middleware(request: web.Request, handler):
     return response
 
 
+def _tail_lines(filepath: str, max_lines: int = 80, chunk_size: int = 65536) -> list:
+    """Safely read the last N lines of a file without reading the entire file into memory."""
+    try:
+        size = os.path.getsize(filepath)
+        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+            if size > chunk_size:
+                f.seek(size - chunk_size)
+                f.readline()  # discard partial leading line
+            return [l.strip() for l in f.readlines()[-max_lines:] if l.strip()]
+    except Exception as e:
+        log.debug(f"Log tail notice for {filepath}: {e}")
+        return []
+
+
 def handle_logs_io_sync(file_map: dict, method: str, log_type: str):
     import os
     if method == "POST":
         for p in file_map.values():
             if os.path.exists(p):
                 try:
-                    with open(p, "w", encoding="utf-8") as f:
+                    with open(p, "r+", encoding="utf-8") as f:
+                        f.seek(0)
                         f.truncate(0)
-                except Exception as e:
-                    log.debug(f"Log truncate notice for {p}: {e}")
+                except Exception:
+                    try:
+                        with open(p, "w", encoding="utf-8") as f:
+                            f.truncate(0)
+                    except Exception as e:
+                        log.debug(f"Log truncate notice for {p}: {e}")
         return {"status": "ok", "cleared": True}
     lines = []
     if log_type in file_map:
         target_path = file_map[log_type]
         if os.path.exists(target_path):
-            try:
-                with open(target_path, "r", encoding="utf-8", errors="replace") as f:
-                    lines = [l.strip() for l in f.readlines()[-80:] if l.strip()]
-            except Exception as e:
-                log.debug(f"Log read notice for {target_path}: {e}")
+            lines = _tail_lines(target_path, 80)
     else:
         merged = []
         for p in file_map.values():
             if os.path.exists(p):
-                try:
-                    with open(p, "r", encoding="utf-8", errors="replace") as f:
-                        merged.extend([l.strip() for l in f.readlines()[-60:] if l.strip()])
-                except Exception as e:
-                    log.debug(f"Log merge notice for {p}: {e}")
+                merged.extend(_tail_lines(p, 60))
         merged.sort()
         lines = merged[-80:]
     return {"logs": lines, "type": log_type}

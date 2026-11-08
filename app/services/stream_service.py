@@ -313,6 +313,7 @@ def search_youtube_tracks(query: str, limit: int = 6) -> list[dict]:
                 "extract_flat": True,
                 "skip_download": True,
                 "no_warnings": True,
+                "socket_timeout": 12,
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 res = ydl.extract_info(f"ytsearch{limit}:{q}", download=False)
@@ -461,6 +462,7 @@ def search_soundcloud_tracks(query: str, limit: int = 12) -> list[dict]:
             "extract_flat": True,
             "skip_download": True,
             "no_warnings": True,
+            "socket_timeout": 12,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             res = ydl.extract_info(f"scsearch{limit}:{q}", download=False)
@@ -501,6 +503,7 @@ def resolve_soundcloud_url(url: str) -> list[dict]:
             "extract_flat": True,
             "skip_download": True,
             "no_warnings": True,
+            "socket_timeout": 12,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -776,6 +779,7 @@ def resolve_track_stream(
                 "extract_flat": True,
                 "skip_download": True,
                 "no_warnings": True,
+                "socket_timeout": 12,
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 for yt_query in (f"{clean_artist} - {clean_core} Official Audio", f"{clean_artist} - {clean_core}"):
@@ -883,6 +887,7 @@ def get_stream_info(video_id: str, quality: str = "auto", force_fresh: bool = Fa
             "noplaylist": True,
             "compat_opts": ["no-plugins"],
             "check_formats": False,
+            "socket_timeout": 12,
         }
 
         cookie_file_candidates = [

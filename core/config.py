@@ -30,16 +30,25 @@ def load_bot_config() -> dict:
     return defaults
 
 def save_bot_config(updates: dict) -> bool:
-    """Save/update configuration keys in config.json."""
+    """Save/update configuration keys in config.json safely via atomic replace."""
     if not isinstance(updates, dict) or not updates:
         return False
     current = load_bot_config()
     current.update(updates)
+    tmp_path = f"{CONFIG_PATH}.tmp"
     try:
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        with open(tmp_path, "w", encoding="utf-8") as f:
             json.dump(current, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, CONFIG_PATH)
         return True
     except Exception:
+        try:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        except OSError:
+            pass
         return False
 
 _cfg = load_bot_config()

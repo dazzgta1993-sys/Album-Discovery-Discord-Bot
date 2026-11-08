@@ -190,6 +190,23 @@ def handle_logs_io_sync(file_map: dict, method: str, log_type: str):
 
 
 
+def _classify_discography_album(a: dict) -> str:
+    tit = (a.get("title") or "").lower()
+    rec = (a.get("record_type") or "album").lower()
+    if any(k in tit for k in ("soundtrack", "ost", "motion picture", "score")):
+        return "Soundtracks"
+    if any(k in tit for k in ("remix", "remixes", "club mix", "dub mix")):
+        return "Remixes"
+    if any(k in tit for k in ("live", "concert", "in session", "bbc", "unplugged", "tour")):
+        return "Live Albums"
+    if rec == "compile" or any(k in tit for k in ("greatest hits", "best of", "anthology", "essential", "collection", "gold")):
+        return "Compilations"
+    if rec == "ep":
+        return "EPs"
+    if rec == "single":
+        return "Singles"
+    return "Studio Albums"
+
 async def api_discography(request: web.Request) -> web.Response:
     from app.services import deezer_api
     artist = request.query.get("artist", "").strip()
@@ -201,18 +218,33 @@ async def api_discography(request: web.Request) -> web.Response:
     art = artists[0]
     art_id = str(art.get("id"))
     art_name = art.get("name") or artist
+    picture = art.get("picture_medium") or art.get("picture_big") or art.get("picture") or ""
 
-    albums_raw = await asyncio.to_thread(deezer_api.get_artist_discography, art_id, 80)
+    albums_raw = await asyncio.to_thread(deezer_api.get_artist_discography, art_id, 100)
     seen_titles = set()
     cleaned = []
+    counts = {}
     for a in albums_raw:
-        title = a.get("title", "").strip()
+        title = (a.get("title") or "").strip()
         t_lower = title.lower()
         if t_lower in seen_titles:
             continue
         seen_titles.add(t_lower)
+        cat = _classify_discography_album(a)
+        a["category"] = cat
+        counts[cat] = counts.get(cat, 0) + 1
         cleaned.append(a)
-    return web.json_response({"artist": art_name, "albums": cleaned})
+
+    cat_order = ["Studio Albums", "EPs", "Singles", "Live Albums", "Compilations", "Remixes", "Soundtracks"]
+    categories = [c for c in cat_order if counts.get(c)]
+
+    return web.json_response({
+        "artist": art_name,
+        "picture": picture,
+        "categories": categories,
+        "counts": counts,
+        "albums": cleaned
+    })
 
 async def api_timemachine(request: web.Request) -> web.Response:
     try:

@@ -215,7 +215,7 @@ def ensure_single_instance():
                 if "python" in name:
                     cmd = proc.info.get("cmdline") or []
                     if any("bot.py" in str(arg) for arg in cmd) and not any("-c" in str(arg) for arg in cmd):
-                        log.warning(f"Found lingering bot instance (PID {p_id}). Terminating it to prevent ghost conflicts...")
+                        log.info(f"Terminated previous bot instance (PID {p_id}) to ensure clean single-process startup.")
                         proc.kill()
                         proc.wait(timeout=2)
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):

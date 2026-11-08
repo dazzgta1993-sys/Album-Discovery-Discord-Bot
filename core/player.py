@@ -598,9 +598,9 @@ class GuildPlayer:
                     hdr_lines = "".join(f"{k}: {v}\r\n" for k, v in headers_dict.items() if k.lower() in ("user-agent", "accept", "accept-language"))
                 else:
                     hdr_lines = "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\r\n"
-                ffmpeg_before_opts = f'-headers "{hdr_lines}" -reconnect 1 -reconnect_streamed 1 -reconnect_on_network_error 1 -reconnect_delay_max 5 -probesize 65536 -analyzeduration 100000 -nostdin'
+                ffmpeg_before_opts = f'-headers "{hdr_lines}" -reconnect 1 -reconnect_streamed 1 -reconnect_on_network_error 1 -reconnect_delay_max 5 -probesize 65536 -analyzeduration 100000 -thread_queue_size 1024 -nostdin'
                 bitrate_flag = {"128k": " -b:a 128k", "192k": " -b:a 192k", "320k": " -b:a 320k"}.get(self.audio_quality, "")
-                ffmpeg_opts = f"-vn -af afade=t=in:ss=0:d=0.03,volume=0.95{bitrate_flag}"
+                ffmpeg_opts = f"-vn -af aresample=resampler=soxr:precision=28:cheby=1,afade=t=in:ss=0:d=0.03,alimiter=limit=-0.5dB:level=false,volume=0.95{bitrate_flag} -threads 2"
                 
                 audio_source = discord.FFmpegPCMAudio(
                     stream_url,

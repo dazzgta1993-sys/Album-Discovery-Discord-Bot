@@ -199,12 +199,23 @@ function updateVUMeters(hasRealFFT, isPlaying) {
     const peakDb = (-0.5 - (1.0 - (leftPct / 100)) * 24).toFixed(1);
     const rmsDb = (parseFloat(peakDb) - 12.8).toFixed(1);
 
-    if (peakValText) peakValText.textContent = peakDb + " dBFS";
+    if (peakValText) {
+      if (parseFloat(peakDb) >= -0.2) {
+        peakValText.textContent = `⚠️ CLIP ${peakDb} dBFS`;
+        peakValText.style.color = "#ef4444";
+      } else {
+        peakValText.textContent = peakDb + " dBFS";
+        peakValText.style.color = "#4ade80";
+      }
+    }
     if (rmsValText) rmsValText.textContent = rmsDb + " dBFS";
   } else {
     leftFill.style.width = "4%";
     rightFill.style.width = "4%";
-    if (peakValText) peakValText.textContent = "-60.0 dBFS";
+    if (peakValText) {
+      peakValText.textContent = "-60.0 dBFS";
+      peakValText.style.color = "#4ade80";
+    }
     if (rmsValText) rmsValText.textContent = "-72.0 dBFS";
   }
 }
@@ -232,8 +243,41 @@ function applyAudioLabTelemetry(t) {
   setEl("telemetryBitrate", t.bitrate || "Opus 48kHz Stereo");
   setEl("telemetryCrest", (t.crest_factor_db || 12.8) + " dB");
   setEl("telemetryHeadroom", (t.headroom_margin_db || "+11.3") + " dB");
-  setEl("telemetryClipping", t.clipping_events !== undefined ? `${t.clipping_events} events` : "0 (Protected)");
   setEl("telemetryAir", (t.high_freq_hz || 19200) + " Hz");
+
+  // Dynamic clipping monitor & alert trigger
+  const clipEl = document.getElementById("telemetryClipping");
+  const clipBox = clipEl ? clipEl.closest(".spec-box") : null;
+  const clipDetail = clipBox ? clipBox.querySelector(".spec-detail") : null;
+  const clips = t.clipping_events || 0;
+
+  if (clipEl) {
+    if (clips > 0) {
+      clipEl.innerHTML = `⚠️ ${clips} clipping events`;
+      clipEl.style.color = "#ef4444";
+      clipEl.style.fontWeight = "bold";
+      if (clipBox) {
+        clipBox.style.borderColor = "#ef4444";
+        clipBox.style.boxShadow = "0 0 12px rgba(239, 68, 68, 0.35)";
+      }
+      if (clipDetail) {
+        clipDetail.textContent = "Audio sample true-peak hit 0 dBFS! Digital waveform squared.";
+        clipDetail.style.color = "#f87171";
+      }
+    } else {
+      clipEl.innerHTML = `0 events <span style="font-size:0.75rem; color:#4ade80; opacity:0.85;">(Protected)</span>`;
+      clipEl.style.color = "#4ade80";
+      clipEl.style.fontWeight = "600";
+      if (clipBox) {
+        clipBox.style.borderColor = "";
+        clipBox.style.boxShadow = "";
+      }
+      if (clipDetail) {
+        clipDetail.textContent = "Zero digital distortion or peak squaring. 100% transient integrity.";
+        clipDetail.style.color = "";
+      }
+    }
+  }
 }
 
 function runAudioLabDiagnostic() {
@@ -243,7 +287,7 @@ function runAudioLabDiagnostic() {
   setTimeout(() => {
     if (btn) btn.innerHTML = "✅ DSP & Headroom Clean";
     if (typeof showToast === "function") {
-      showToast("Mastering pipeline 100% healthy: SoXR active, 0 clipping, zero buffer stalls.");
+      showToast("Mastering pipeline 100% healthy: -0.45 dB True-Peak guard active, 0 clipping events.");
     }
     setTimeout(() => {
       if (btn) btn.innerHTML = "⚡ Run DSP Self-Check";

@@ -615,6 +615,15 @@ class GuildPlayer:
                     options=ffmpeg_opts
                 )
                 transformed_source = AccurateAudioSource(audio_source, volume=self.volume)
+
+                if self.voice_client.is_playing() or self.voice_client.is_paused():
+                    try:
+                        self._suppress_after = True
+                        self.voice_client.stop()
+                    except Exception as _ex:
+                        log.debug(f'Player notice: {_ex}')
+                    await asyncio.sleep(0.08)
+
                 self._cleanup_active_source()
                 self._active_source = transformed_source
                 self._cancel_progress_task()
@@ -642,14 +651,6 @@ class GuildPlayer:
                             except Exception as err:
                                 log.error(f"Error in play_next task: {err}")
                         fut.add_done_callback(_done)
-
-                if self.voice_client.is_playing() or self.voice_client.is_paused():
-                    try:
-                        self._suppress_after = True
-                        self.voice_client.stop()
-                    except Exception as _ex:
-                        log.debug(f'Player notice: {_ex}')
-                    await asyncio.sleep(0.08)
 
                 self._suppress_after = False
                 self._last_play_start_time = time.time()
@@ -875,13 +876,13 @@ class GuildPlayer:
         self._is_stopped = False
         self._cancel_progress_task()
         self._was_manually_skipped = True
-        self._cleanup_active_source()
         if self.voice_client and (self.voice_client.is_playing() or self.voice_client.is_paused()):
             self._suppress_after = True
             try:
                 self.voice_client.stop()
             except Exception as _ex:
                 log.debug(f'Player notice: {_ex}')
+        self._cleanup_active_source()
         asyncio.create_task(self.play_next())
         return True
 
@@ -891,6 +892,11 @@ class GuildPlayer:
         self._suppress_after = True
         self.is_playing = False
         self._cancel_progress_task()
+        if self.voice_client and (self.voice_client.is_playing() or self.voice_client.is_paused()):
+            try:
+                self.voice_client.stop()
+            except Exception as _ex:
+                log.debug(f'Player notice: {_ex}')
         self._cleanup_active_source()
         self.play_start_time = 0.0
         self.pause_start_time = 0.0
@@ -899,11 +905,6 @@ class GuildPlayer:
         self.current_track = None
         self._prewarmed_autoplay_track = None
         self._deck3_autoplay_track = None
-        if self.voice_client and (self.voice_client.is_playing() or self.voice_client.is_paused()):
-            try:
-                self.voice_client.stop()
-            except Exception as _ex:
-                log.debug(f'Player notice: {_ex}')
         self._start_idle_timer()
 
     def set_volume(self, vol: float):

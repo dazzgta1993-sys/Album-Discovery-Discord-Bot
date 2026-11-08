@@ -364,7 +364,7 @@ async def api_control(request: web.Request) -> web.Response:
             player.explicit_filter = data["explicit_filter"]
         if "artist_cooldown" in data:
             try: player.artist_cooldown = max(0, min(50, int(data["artist_cooldown"])))
-            except: pass
+            except Exception: pass
         if "era_filter" in data and str(data["era_filter"]) in ("all", "2020s", "2010s", "2000s", "classics"):
             player.era_filter = str(data["era_filter"])
         if "vibe_energy" in data and str(data["vibe_energy"]) in ("auto", "high", "chill"):

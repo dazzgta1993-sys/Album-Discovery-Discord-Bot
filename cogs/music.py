@@ -15,18 +15,21 @@ class MusicCog(commands.Cog, name="Music"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    async def _send_notice(self, interaction: discord.Interaction, embed: discord.Embed = None, message: str = None, delay: float = 4.0):
+    async def _send_notice(self, interaction: discord.Interaction, embed: discord.Embed = None, message: str = None, delay: float = 4.0, ephemeral: bool = False):
         """Sends an auto-expiring notification that automatically vanishes after `delay` seconds, keeping chat 100% clean."""
         try:
             if interaction.response.is_done():
-                msg = await interaction.followup.send(content=message, embed=embed)
-                if msg and hasattr(msg, "delete"):
+                msg = await interaction.followup.send(content=message, embed=embed, ephemeral=ephemeral)
+                if not ephemeral and msg and hasattr(msg, "delete") and delay:
                     try:
                         await msg.delete(delay=delay)
                     except Exception as _ex:
                         log.debug(f'Notice: {_ex}')
             else:
-                await interaction.response.send_message(content=message, embed=embed, delete_after=delay)
+                if ephemeral:
+                    await interaction.response.send_message(content=message, embed=embed, ephemeral=True)
+                else:
+                    await interaction.response.send_message(content=message, embed=embed, delete_after=delay)
         except Exception as _ex:
             log.debug(f'Notice: {_ex}')
 
@@ -535,35 +538,35 @@ class MusicCog(commands.Cog, name="Music"):
     async def skip(self, interaction: discord.Interaction):
         player = self.bot.player_manager.get_player(interaction.guild)
         if not player.is_playing:
-            await interaction.response.send_message("❌ Nothing is currently playing.", ephemeral=True)
+            await self._send_notice(interaction, message="❌ Nothing is currently playing.", ephemeral=True)
             return
 
         current = player.current_track
         player.skip()
-        await interaction.response.send_message(f"⏭️ Skipped **{current.title if current else 'track'}**.", delete_after=3.5)
+        await self._send_notice(interaction, message=f"⏭️ Skipped **{current.title if current else 'track'}**.", delay=3.5)
 
     @app_commands.command(name="pause", description="Pause audio playback")
     async def pause(self, interaction: discord.Interaction):
         player = self.bot.player_manager.get_player(interaction.guild)
         if player.pause():
-            await interaction.response.send_message("⏸️ Paused playback.", delete_after=3.5)
+            await self._send_notice(interaction, message="⏸️ Paused playback.", delay=3.5)
         else:
-            await interaction.response.send_message("❌ Audio is not playing.", ephemeral=True)
+            await self._send_notice(interaction, message="❌ Audio is not playing.", ephemeral=True)
 
     @app_commands.command(name="resume", description="Resume audio playback")
     async def resume(self, interaction: discord.Interaction):
         player = self.bot.player_manager.get_player(interaction.guild)
         if player.resume():
-            await interaction.response.send_message("▶️ Resumed playback.", delete_after=3.5)
+            await self._send_notice(interaction, message="▶️ Resumed playback.", delay=3.5)
         else:
-            await interaction.response.send_message("❌ Audio is not paused.", ephemeral=True)
+            await self._send_notice(interaction, message="❌ Audio is not paused.", ephemeral=True)
 
     @app_commands.command(name="stop", description="Stop playback and leave voice")
     async def stop(self, interaction: discord.Interaction):
         player = self.bot.player_manager.get_player(interaction.guild)
         player.stop()
         await player.disconnect()
-        await interaction.response.send_message("⏹️ Stopped playback and disconnected from voice.", delete_after=3.5)
+        await self._send_notice(interaction, message="⏹️ Stopped playback and disconnected from voice.", delay=3.5)
 
     @app_commands.command(name="queue", description="Display the current music queue")
     async def queue(self, interaction: discord.Interaction):
@@ -657,7 +660,7 @@ class MusicCog(commands.Cog, name="Music"):
             store.save_guild_settings(str(interaction.guild.id), {"volume": player.volume})
         except Exception as _ex:
             log.debug(f'Notice: {_ex}')
-        await interaction.response.send_message(f"🔊 Volume set to **{val}%**", delete_after=3.5)
+        await self._send_notice(interaction, message=f"🔊 Volume set to **{val}%**", delay=3.5)
 
     @app_commands.command(name="quality", description="Set audio streaming bitrate quality")
     @app_commands.describe(bitrate="Select streaming audio quality (Auto, 128k, 192k, or 320k Studio)")
@@ -675,7 +678,7 @@ class MusicCog(commands.Cog, name="Music"):
             store.save_guild_settings(str(interaction.guild.id), {"audio_quality": player.audio_quality})
         except Exception as _ex:
             log.debug(f'Notice: {_ex}')
-        await interaction.response.send_message(f"🎧 Audio quality set to **{bitrate.name}**", delete_after=3.5)
+        await self._send_notice(interaction, message=f"🎧 Audio quality set to **{bitrate.name}**", delay=3.5)
 
     @app_commands.command(name="shuffle", description="Shuffle the current music queue")
     async def shuffle(self, interaction: discord.Interaction):
@@ -683,14 +686,14 @@ class MusicCog(commands.Cog, name="Music"):
         if len(player.queue) >= 2:
             player.shuffle()
             asyncio.create_task(player.update_player_message())
-            await interaction.response.send_message(f"🔀 Shuffled **{len(player.queue)}** tracks in the queue!", delete_after=3.5)
+            await self._send_notice(interaction, message=f"🔀 Shuffled **{len(player.queue)}** tracks in the queue!", delay=3.5)
         elif len(player.queue) == 0 and player.autoplay:
             player._prewarmed_autoplay_track = None
             player._deck3_autoplay_track = None
             asyncio.create_task(player._prewarm_next_track())
-            await interaction.response.send_message("🔀 Re-shuffled upcoming AI Autoplay tracks on Deck 2 & Deck 3!", delete_after=3.5)
+            await self._send_notice(interaction, message="🔀 Re-shuffled upcoming AI Autoplay tracks on Deck 2 & Deck 3!", delay=3.5)
         else:
-            await interaction.response.send_message("ℹ️ Not enough tracks in queue to shuffle.", ephemeral=True)
+            await self._send_notice(interaction, message="ℹ️ Not enough tracks in queue to shuffle.", ephemeral=True)
 
     @app_commands.command(name="loop", description="Set repeat loop mode")
     @app_commands.choices(mode=[
@@ -707,7 +710,7 @@ class MusicCog(commands.Cog, name="Music"):
         except Exception as _ex:
             log.debug(f'Notice: {_ex}')
         asyncio.create_task(player.update_player_message())
-        await interaction.response.send_message(f"🔁 Loop mode set to: **{mode.name}**", delete_after=3.5)
+        await self._send_notice(interaction, message=f"🔁 Loop mode set to: **{mode.name}**", delay=3.5)
 
     @app_commands.command(name="dj", description="Toggle or select the AI Autoplay DJ recommendation engine")
     @app_commands.describe(engine="Select an intelligence engine to power Autoplay recommendations")
@@ -733,9 +736,10 @@ class MusicCog(commands.Cog, name="Music"):
                 "vibe_engine_source": engine.value
             })
             asyncio.create_task(player.update_player_message())
-            await interaction.response.send_message(
-                f"🎛️ Autoplay DJ engine set to **{engine.name}**! Autoplay is now **ENABLED 🟢**.",
-                delete_after=5.0
+            await self._send_notice(
+                interaction,
+                message=f"🎛️ Autoplay DJ engine set to **{engine.name}**! Autoplay is now **ENABLED 🟢**.",
+                delay=5.0
             )
             if not player.is_playing and len(player.queue) == 0 and player.current_track:
                 asyncio.create_task(player.play_next())
@@ -749,7 +753,7 @@ class MusicCog(commands.Cog, name="Music"):
             asyncio.create_task(player.update_player_message())
             status = "ENABLED 🎛️" if player.autoplay else "DISABLED ⏹️"
             engine_label = getattr(player, "vibe_engine_source", "auto").upper()
-            await interaction.response.send_message(f"Autoplay DJ is now **{status}** [Engine: {engine_label}]", delete_after=3.5)
+            await self._send_notice(interaction, message=f"Autoplay DJ is now **{status}** [Engine: {engine_label}]", delay=3.5)
 
     @app_commands.command(name="brain", description="Show live AI Vibe Engine status, active platform, and telemetry")
     async def brain(self, interaction: discord.Interaction):
@@ -786,7 +790,7 @@ class MusicCog(commands.Cog, name="Music"):
         player = self.bot.player_manager.get_player(interaction.guild)
         t = player.current_track or (player.history[-1] if player.history else None)
         if not t:
-            await interaction.response.send_message("❌ No active or recently played track to save.", ephemeral=True)
+            await self._send_notice(interaction, message="❌ No active or recently played track to save.", ephemeral=True)
             return
         from app import store
         pl_name = (playlist or "Favorites").strip()[:60] or "Favorites"
@@ -797,9 +801,9 @@ class MusicCog(commands.Cog, name="Music"):
         }, playlist_name=pl_name)
         player.handle_feedback(t.artist, t.title, "up")
         if res.get("added"):
-            await interaction.response.send_message(f"❤️ Saved **{t.artist} — {t.title}** to **My Crate ({pl_name})**! ({res.get('count', 1)} tracks)", delete_after=5.0)
+            await self._send_notice(interaction, message=f"❤️ Saved **{t.artist} — {t.title}** to **My Crate ({pl_name})**! ({res.get('count', 1)} tracks)", delay=5.0)
         else:
-            await interaction.response.send_message(f"❤️ **{t.artist} — {t.title}** is already in **My Crate ({pl_name})**!", ephemeral=True)
+            await self._send_notice(interaction, message=f"❤️ **{t.artist} — {t.title}** is already in **My Crate ({pl_name})**!", ephemeral=True)
 
     @app_commands.command(name="crate", description="View, play, or shuffle your saved Favorites & custom playlists in My Crate")
     @app_commands.describe(

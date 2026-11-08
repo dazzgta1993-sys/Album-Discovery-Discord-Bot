@@ -138,6 +138,7 @@ class GuildPlayer:
                     try: self.volume = max(0.0, min(1.0, float(saved["volume"])))
                     except Exception as _ex: log.debug(f'Player setting notice: {_ex}')
                 if "is_anchor_locked" in saved: self.is_anchor_locked = bool(saved["is_anchor_locked"])
+                if "vibe_anchor_artist" in saved and saved["vibe_anchor_artist"]: self.vibe_anchor_artist = str(saved["vibe_anchor_artist"])
         except Exception as _ex:
             log.debug(f'Player notice: {_ex}')
         self.last_brain_decision: str = "Brain System Online • Standby"

@@ -728,3 +728,16 @@ def get_taste_scores(guild_id: str) -> dict:
     except Exception as e:
         log.debug(f"Taste profile read notice: {e}")
         return {}
+
+
+def clear_taste_scores(guild_id: str) -> bool:
+    """Clear all artist taste scores for a guild from SQLite."""
+    try:
+        with _get_connection() as conn:
+            conn.cursor().execute("DELETE FROM taste_profiles WHERE guild_id = ?", (str(guild_id),))
+            conn.commit()
+            return True
+    except Exception as e:
+        log.debug(f"Taste profile clear notice: {e}")
+        return False
+

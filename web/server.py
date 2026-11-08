@@ -332,6 +332,12 @@ async def api_control(request: web.Request) -> web.Response:
                 log.warning(f"Failed to join voice channel: {e}")
     elif action == "leave_voice":
         await player.disconnect()
+    elif action == "reset_taste":
+        from app import store as db_store
+        db_store.clear_taste_scores(str(guild.id))
+        from core.vibe_engine import _guild_taste_store, get_guild_taste_profile
+        _guild_taste_store.pop(guild.id, None)
+        return web.json_response({"status": "ok", "action": "reset_taste", "taste_profile": get_guild_taste_profile(guild.id)})
     elif action == "seek":
         try:
             pos_sec = max(0, int(float(value if value is not None else data.get("position", 0))))
@@ -347,22 +353,17 @@ async def api_control(request: web.Request) -> web.Response:
         if "vibe_mode" in data and data["vibe_mode"] in ("deep_dive", "collabs", "balanced", "discovery"):
             player.vibe_mode = data["vibe_mode"]
         if "vibe_drift_freq" in data:
-            try:
-                player.vibe_drift_freq = max(1, min(10, int(data["vibe_drift_freq"])))
-            except Exception as _ex:
-                log.debug(f'Web handler notice: {_ex}')
+            try: player.vibe_drift_freq = max(1, min(10, int(data["vibe_drift_freq"])))
+            except Exception as _ex: log.debug(f'Web handler notice: {_ex}')
         if "hit_depth" in data and data["hit_depth"] in ("top_hits", "balanced", "deep_cuts"):
             player.hit_depth = data["hit_depth"]
-        if "deck2_enabled" in data:
-            player.deck2_enabled = bool(data["deck2_enabled"])
-        if "deck3_enabled" in data:
-            player.deck3_enabled = bool(data["deck3_enabled"])
-        if "startup_autoplay" in data:
-            player.startup_autoplay = bool(data["startup_autoplay"])
+        if "deck2_enabled" in data: player.deck2_enabled = bool(data["deck2_enabled"])
+        if "deck3_enabled" in data: player.deck3_enabled = bool(data["deck3_enabled"])
+        if "startup_autoplay" in data: player.startup_autoplay = bool(data["startup_autoplay"])
         if "explicit_filter" in data and data["explicit_filter"] in ("allow", "clean_only"):
             player.explicit_filter = data["explicit_filter"]
         if "artist_cooldown" in data:
-            try: player.artist_cooldown = int(data["artist_cooldown"])
+            try: player.artist_cooldown = max(0, min(50, int(data["artist_cooldown"])))
             except: pass
         if "era_filter" in data and str(data["era_filter"]) in ("all", "2020s", "2010s", "2000s", "classics"):
             player.era_filter = str(data["era_filter"])
@@ -370,6 +371,11 @@ async def api_control(request: web.Request) -> web.Response:
             player.vibe_energy = str(data["vibe_energy"])
         if "vibe_engine_source" in data and str(data["vibe_engine_source"]) in ("auto", "ytmusic", "youtube", "deezer", "spotify", "apple", "soundcloud", "musicbrainz", "charts"):
             player.vibe_engine_source = str(data["vibe_engine_source"])
+        if "is_anchor_locked" in data:
+            player.is_anchor_locked = bool(data["is_anchor_locked"])
+        if "vibe_anchor_artist" in data:
+            val = str(data["vibe_anchor_artist"]).strip()
+            player.vibe_anchor_artist = val if val and val.lower() != "auto" else None
         player.last_brain_decision = f"Brain Hub Update: {player.vibe_mode.title()} (Drift: {player.vibe_drift_freq} tracks)"
         try:
             from core.config import save_bot_config
@@ -391,6 +397,8 @@ async def api_control(request: web.Request) -> web.Response:
                 "era_filter": getattr(player, "era_filter", "all"),
                 "vibe_energy": getattr(player, "vibe_energy", "auto"),
                 "vibe_engine_source": getattr(player, "vibe_engine_source", "auto"),
+                "is_anchor_locked": getattr(player, "is_anchor_locked", False),
+                "vibe_anchor_artist": player.vibe_anchor_artist or "",
             })
         except Exception as e:
             log.warning(f"Failed to persist guild brain settings to store: {e}")
@@ -404,7 +412,9 @@ async def api_control(request: web.Request) -> web.Response:
                 "deck2_enabled": player.deck2_enabled,
                 "deck3_enabled": getattr(player, "deck3_enabled", True),
                 "startup_autoplay": getattr(player, "startup_autoplay", True),
-                "explicit_filter": player.explicit_filter
+                "explicit_filter": player.explicit_filter,
+                "is_anchor_locked": getattr(player, "is_anchor_locked", False),
+                "vibe_anchor_artist": player.vibe_anchor_artist or ""
             }
         })
     else:
@@ -946,28 +956,11 @@ def create_web_app(bot: discord.Client) -> web.Application:
     app["bot"] = bot
 
     # Routes
-    app.router.add_get("/", handle_index)
-    app.router.add_get("/api/status", api_status)
-    app.router.add_get("/api/guilds", api_status)
-    app.router.add_get("/api/guild/{guild_id}", api_guild_state)
-    app.router.add_post("/api/guild/{guild_id}/control", api_control)
-    app.router.add_post("/api/guild/{guild_id}/feedback", api_feedback)
-    app.router.add_post("/api/guild/{guild_id}/queue/{op}", api_queue_action)
-    app.router.add_get("/api/search", api_search)
-    app.router.add_post("/api/guild/{guild_id}/play", api_play)
-    app.router.add_get("/api/charts", api_charts)
     from web.album_api import api_dna, api_discography, api_timemachine, api_radio, api_crate, api_cover_proxy
-    app.router.add_get("/api/cover", api_cover_proxy)
-    app.router.add_get("/api/discography", api_discography)
-    app.router.add_get("/api/album/tracks", api_album_tracks)
-    app.router.add_get("/api/guild/{guild_id}/dna", api_dna)
-    app.router.add_get("/api/guild/{guild_id}/crate", api_crate)
-    app.router.add_post("/api/guild/{guild_id}/crate", api_crate)
-    app.router.add_get("/api/logs", api_logs)
-    app.router.add_post("/api/logs", api_logs)
-    app.router.add_get("/api/timemachine", api_timemachine)
-    app.router.add_get("/api/radio", api_radio)
-    app.router.add_get("/api/guild/{guild_id}/stream", api_stream)
+    for p, h in [("/", handle_index), ("/api/status", api_status), ("/api/guilds", api_status), ("/api/guild/{guild_id}", api_guild_state), ("/api/search", api_search), ("/api/charts", api_charts), ("/api/cover", api_cover_proxy), ("/api/discography", api_discography), ("/api/album/tracks", api_album_tracks), ("/api/guild/{guild_id}/dna", api_dna), ("/api/guild/{guild_id}/crate", api_crate), ("/api/logs", api_logs), ("/api/timemachine", api_timemachine), ("/api/radio", api_radio), ("/api/guild/{guild_id}/stream", api_stream)]:
+        app.router.add_get(p, h)
+    for p, h in [("/api/guild/{guild_id}/control", api_control), ("/api/guild/{guild_id}/feedback", api_feedback), ("/api/guild/{guild_id}/queue/{op}", api_queue_action), ("/api/guild/{guild_id}/play", api_play), ("/api/guild/{guild_id}/crate", api_crate), ("/api/logs", api_logs)]:
+        app.router.add_post(p, h)
 
     if os.path.exists(STATIC_DIR):
         app.router.add_static("/static/", STATIC_DIR)

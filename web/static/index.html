@@ -351,6 +351,7 @@
         <!-- Quick Jump Navigation Menu -->
         <div class="brain-nav-menu" style="display:flex; gap:6px; overflow-x:auto; padding:4px 0 10px 0; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:12px; flex-shrink:0;">
           <button class="btn-micro" onclick="document.getElementById('sec-dna').scrollIntoView({behavior:'smooth', block:'start'})" style="border-color:rgba(167,139,250,0.4); color:#c4b5fd;">🧬 Music DNA</button>
+          <button class="btn-micro" onclick="document.getElementById('sec-taste').scrollIntoView({behavior:'smooth', block:'start'})" style="border-color:rgba(245,158,11,0.4); color:#fde68a;">⭐ AI Taste Profile</button>
           <button class="btn-micro" onclick="document.getElementById('sec-matrix').scrollIntoView({behavior:'smooth', block:'start'})">🎯 Discovery Matrix</button>
           <button class="btn-micro" onclick="document.getElementById('sec-frequency').scrollIntoView({behavior:'smooth', block:'start'})">🔀 Drift & Depth</button>
           <button class="btn-micro" onclick="document.getElementById('sec-guardrails').scrollIntoView({behavior:'smooth', block:'start'})">⚡ Preload & Shield</button>
@@ -423,7 +424,13 @@
         <div class="brain-telemetry-card">
           <div class="telemetry-item">
             <span class="telemetry-label">CURRENT VIBE ANCHOR</span>
-            <span class="telemetry-val" id="telemetryAnchor">Auto Anchor</span>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:2px;">
+              <span class="telemetry-val" id="telemetryAnchor" style="font-size:0.85rem;">Auto Anchor</span>
+              <div style="display:flex; gap:4px; flex-shrink:0;">
+                <button class="btn-micro" id="btnAnchorLock" onclick="toggleAnchorLock()" title="Toggle Lock Current Artist Anchor" style="padding:2px 6px;">🔓 Auto</button>
+                <button class="btn-micro" onclick="promptCustomAnchor()" title="Set Custom Artist Anchor" style="padding:2px 6px;">✏️ Set</button>
+              </div>
+            </div>
           </div>
           <div class="telemetry-item">
             <span class="telemetry-label">AUTOPLAY CHAIN</span>
@@ -440,6 +447,34 @@
           <div class="telemetry-item" style="grid-column: 1 / -1;">
             <span class="telemetry-label">LAST BRAIN DECISION</span>
             <span class="telemetry-val" id="telemetryDecision" style="font-size:0.8rem; font-weight:500; color:#cbd5e1;">Standby</span>
+          </div>
+        </div>
+
+        <!-- Live AI Taste Profile & Recommendation Weights Card -->
+        <div id="sec-taste" class="brain-dna-card" style="margin-top:12px; background:rgba(255,255,255,0.02); border-color:rgba(168,85,247,0.25);">
+          <div class="brain-dna-header">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:1.15rem;">⭐</span>
+              <div>
+                <div style="font-weight:700; font-size:0.88rem; color:#f8fafc;">AI Taste Profile &amp; Recommendation Weights</div>
+                <div style="font-size:0.7rem; color:var(--text-muted);">Real-time reinforcement signals trained by server listening feedback (👍 Love / 👎 Dislike).</div>
+              </div>
+            </div>
+            <button class="btn-micro" onclick="resetTasteProfile()" title="Reset all learned server preferences" style="border-color:rgba(239,68,68,0.4); color:#fca5a5; background:rgba(239,68,68,0.1);">🔄 Reset Taste</button>
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; padding:10px 14px 14px 14px;">
+            <div style="background:rgba(34,197,94,0.06); padding:10px; border-radius:var(--radius-sm); border:1px solid rgba(34,197,94,0.15);">
+              <div style="font-size:0.75rem; font-weight:700; color:#4ade80; margin-bottom:6px;">👍 BOOSTED ARTISTS (Score +2 per Like)</div>
+              <div id="tasteLikesList" style="display:flex; flex-wrap:wrap; gap:5px; min-height:24px;">
+                <span style="color:var(--text-muted); font-size:0.75rem;">None yet. Thumbs up songs on the player deck!</span>
+              </div>
+            </div>
+            <div style="background:rgba(239,68,68,0.06); padding:10px; border-radius:var(--radius-sm); border:1px solid rgba(239,68,68,0.15);">
+              <div style="font-size:0.75rem; font-weight:700; color:#f87171; margin-bottom:6px;">👎 BANISHED FROM AUTOPLAY (Score -10 per Dislike)</div>
+              <div id="tasteDislikesList" style="display:flex; flex-wrap:wrap; gap:5px; min-height:24px;">
+                <span style="color:var(--text-muted); font-size:0.75rem;">None (No artists or tracks banished).</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -548,6 +583,7 @@
               <button class="pill-btn active" id="cooldown-10" onclick="selectArtistCooldown(10)">🔒 Strict (10 Songs)</button>
               <button class="pill-btn" id="cooldown-5" onclick="selectArtistCooldown(5)">⚖️ Balanced (5 Songs)</button>
               <button class="pill-btn" id="cooldown-2" onclick="selectArtistCooldown(2)">⚡ Light (2 Songs)</button>
+              <button class="pill-btn" id="cooldown-0" onclick="selectArtistCooldown(0)">⚡ Off (0 Songs)</button>
             </div>
             <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
               Authentic broadcast radio rule: blocks the same artist from repeating within N songs.

@@ -15,19 +15,7 @@ window._lastDeck2Track = null;
 window._isSkipping = false;
 window._skippedTrackTitle = "";
 let lastDnaTrackKey = "";
-let currentBrainConfig = {
-  vibe_mode: "balanced",
-  vibe_drift_freq: 1,
-  hit_depth: "balanced",
-  deck2_enabled: true,
-  deck3_enabled: true,
-  startup_autoplay: true,
-  explicit_filter: "allow",
-  artist_cooldown: 10,
-  era_filter: "all",
-  vibe_energy: "auto",
-  vibe_engine_source: "auto"
-};
+let currentBrainConfig = { vibe_mode: "balanced", vibe_drift_freq: 1, hit_depth: "balanced", deck2_enabled: true, deck3_enabled: true, startup_autoplay: true, explicit_filter: "allow", artist_cooldown: 10, era_filter: "all", vibe_energy: "auto", vibe_engine_source: "auto", is_anchor_locked: false, vibe_anchor_artist: "" };
 const ALBUM_PLACEHOLDER_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='6' fill='%231b1c26'/%3E%3Ccircle cx='24' cy='24' r='14' fill='%23282a3a'/%3E%3Ccircle cx='24' cy='24' r='4' fill='%239d4edd'/%3E%3C/svg%3E";
 function showToast(msg, icon = "✨") {
   const t = document.getElementById("toastBox");
@@ -40,30 +28,20 @@ function showToast(msg, icon = "✨") {
 function switchTab(tabId, btn) {
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
   document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
-  if (btn) {
-    btn.classList.add("active");
-  } else {
-    const b = document.querySelector(`.tab-btn[onclick*="'${tabId}'"]`);
-    if (b) b.classList.add("active");
-  }
+  if (btn) btn.classList.add("active");
+  else { const b = document.querySelector(`.tab-btn[onclick*="'${tabId}'"]`); if (b) b.classList.add("active"); }
   const target = document.getElementById("tab" + tabId.charAt(0).toUpperCase() + tabId.slice(1));
   if (target) target.classList.add("active");
   if (tabId === "charts") loadCharts();
   if (tabId === "logs") loadLogs(true);
   if (tabId === "radio" && typeof loadCloudRadio === "function") loadCloudRadio();
-  if (tabId === "timemachine" && typeof loadTimeMachine === "function") {
-    const select = document.getElementById("tmYearSelect");
-    loadTimeMachine(select ? select.value : 1999);
-  }
+  if (tabId === "timemachine" && typeof loadTimeMachine === "function") { const s = document.getElementById("tmYearSelect"); loadTimeMachine(s ? s.value : 1999); }
   if (tabId === "discography") {
     const input = document.getElementById("discoArtistInput");
     if (input && !input.value.trim()) {
-      const header = document.getElementById("discoArtistHeader");
-      const container = document.getElementById("discoAlbumList");
-      if (header) header.innerHTML = "";
-      if (container) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">💿</div><div>Explore complete artist discographies classified with MusicBrainz & Apple Music.</div></div>`;
-      }
+      const h = document.getElementById("discoArtistHeader"), c = document.getElementById("discoAlbumList");
+      if (h) h.innerHTML = "";
+      if (c) c.innerHTML = `<div class="empty-state"><div class="empty-icon">💿</div><div>Explore complete artist discographies classified with MusicBrainz & Apple Music.</div></div>`;
     }
   }
 }
@@ -106,13 +84,8 @@ function onSeekerClick(e) {
   const bar = document.getElementById("progressBar");
   if (!bar) return;
   const rect = bar.getBoundingClientRect();
-  const clickX = e.clientX - rect.left;
-  const frac = Math.max(0, Math.min(1, clickX / rect.width));
-  const targetSec = Math.round(frac * localTotal);
-  localElapsed = targetSec;
-  lastPollTimestamp = performance.now();
-  renderSeeker();
-  sendControl("seek", targetSec);
+  const targetSec = Math.round(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * localTotal);
+  localElapsed = targetSec; lastPollTimestamp = performance.now(); renderSeeker(); sendControl("seek", targetSec);
   showToast("Seeked to " + formatTime(targetSec), "⏩");
 }
 
@@ -590,15 +563,10 @@ function toggleAudioMonitor() {
 }
 function togglePlayPause() {
   if (!currentGuildId) return;
-  isPlaying = !isPlaying;
-  isPaused = !isPlaying;
-  const btn = document.getElementById("btnPlayPause");
-  if (btn) btn.innerText = (isPlaying && !isPaused) ? "\u23f8" : "\u25b6";
+  isPlaying = !isPlaying; isPaused = !isPlaying;
+  const btn = document.getElementById("btnPlayPause"); if (btn) btn.innerText = (isPlaying && !isPaused) ? "\u23f8" : "\u25b6";
   const monAudio = document.getElementById("browserMonitorAudio");
-  if (monAudio && isMonitoring) {
-    if (isPlaying && !isPaused) monAudio.play().catch(e => {});
-    else monAudio.pause();
-  }
+  if (monAudio && isMonitoring) { if (isPlaying && !isPaused) monAudio.play().catch(e => {}); else monAudio.pause(); }
   sendControl("toggle_play");
 }
 
@@ -679,22 +647,9 @@ function onVolumeInput(val) {
   volDebounce = setTimeout(() => { sendControl("set_volume", num); }, 120);
 }
 function toggleMute() {
-  const slider = document.getElementById("volSlider");
-  const monAudio = document.getElementById("browserMonitorAudio");
-  const curr = parseInt(slider.value) || 0;
-  if (curr > 0) {
-    preMuteVolume = curr;
-    slider.value = 0;
-    document.getElementById("volPct").innerText = "0%";
-    if (monAudio) monAudio.volume = 0;
-    sendControl("set_volume", 0);
-  } else {
-    const res = preMuteVolume || 100;
-    slider.value = res;
-    document.getElementById("volPct").innerText = res + "%";
-    if (monAudio) monAudio.volume = res / 100;
-    sendControl("set_volume", res);
-  }
+  const slider = document.getElementById("volSlider"), monAudio = document.getElementById("browserMonitorAudio"), curr = parseInt(slider.value) || 0;
+  if (curr > 0) { preMuteVolume = curr; slider.value = 0; document.getElementById("volPct").innerText = "0%"; if (monAudio) monAudio.volume = 0; sendControl("set_volume", 0); }
+  else { const res = preMuteVolume || 100; slider.value = res; document.getElementById("volPct").innerText = res + "%"; if (monAudio) monAudio.volume = res / 100; sendControl("set_volume", res); }
 }
 
 async function joinSelectedVoice() {
@@ -758,31 +713,12 @@ async function queueTrackDirect(track, playNow = false) {
   window.currentGuildId = currentGuildId;
   if (!currentGuildId) { showToast("No server selected", "❌"); return; }
   try {
-    const body = {
-      title: track.title,
-      artist: track.artist,
-      album: track.album || "",
-      cover: track.cover || "",
-      duration_seconds: track.duration_seconds || 0,
-      video_id: track.video_id || null,
-      source: track.source || "deezer",
-      play_now: playNow
-    };
-    const res = await fetch("/api/guild/" + currentGuildId + "/play", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
+    const body = { title: track.title, artist: track.artist, album: track.album || "", cover: track.cover || "", duration_seconds: track.duration_seconds || 0, video_id: track.video_id || null, source: track.source || "deezer", play_now: playNow };
+    const res = await fetch("/api/guild/" + currentGuildId + "/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const d = await res.json();
-    if (res.ok) {
-      showToast(playNow ? "Playing now ▶" : "Added to queue (#" + d.position + ")", "🎵");
-      pollGuildState(currentGuildId);
-    } else {
-      showToast(d.error || "Failed to play", "⚠️");
-    }
-  } catch (e) {
-    showToast("Playback request error", "❌");
-  }
+    if (res.ok) { showToast(playNow ? "Playing now ▶" : "Added to queue (#" + d.position + ")", "🎵"); pollGuildState(currentGuildId); }
+    else { showToast(d.error || "Failed to play", "⚠️"); }
+  } catch (e) { showToast("Playback request error", "❌"); }
 }
 
 async function loadCharts(forceRefresh = false) {
@@ -893,20 +829,11 @@ async function executeDiscographySearch() {
 
     const filterEl = document.getElementById("discoCategoryFilter");
     if (filterEl && data.categories) {
-      let optHtml = `<option value="All">All Categories (${data.albums.length})</option>`;
-      data.categories.forEach(c => {
-        const count = data.counts ? (data.counts[c] || 0) : 0;
-        let icon = "💿";
-        if (c.includes("EP") || c.includes("Single")) icon = "📀";
-        else if (c.includes("Collab")) icon = "🤝";
-        else if (c.includes("Mixtape")) icon = "🔥";
-        else if (c.includes("Compil")) icon = "📦";
-        else if (c.includes("Live")) icon = "🎸";
-        else if (c.includes("Remix")) icon = "🎛️";
-        else if (c.includes("Soundtrack")) icon = "🎬";
-        optHtml += `<option value="${escapeHtml(c)}">${icon} ${escapeHtml(c)} (${count})</option>`;
-      });
-      filterEl.innerHTML = optHtml;
+      const icoMap = {"EP":"📀","Single":"📀","Collab":"🤝","Mixtape":"🔥","Compil":"📦","Live":"🎸","Remix":"🎛️","Soundtrack":"🎬"};
+      filterEl.innerHTML = `<option value="All">All Categories (${data.albums.length})</option>` + data.categories.map(c => {
+        const icon = Object.entries(icoMap).find(([k]) => c.includes(k))?.[1] || "💿";
+        return `<option value="${escapeHtml(c)}">${icon} ${escapeHtml(c)} (${data.counts?.[c] || 0})</option>`;
+      }).join('');
       filterEl.value = "All";
     }
     renderDiscographyAlbums();
@@ -956,32 +883,102 @@ async function queueAlbumDirect(btnOrId, playNow = false, title = '', artist = '
   if (!currentGuildId) currentGuildId = (document.getElementById("serverSelect") || {}).value || "";
   window.currentGuildId = currentGuildId;
   if (!currentGuildId) { showToast("No server selected", "❌"); return; }
-  let albumId = '';
-  if (btnOrId instanceof HTMLElement || (btnOrId && btnOrId.dataset)) {
-    albumId = btnOrId.dataset.albumId || '';
-    title = btnOrId.dataset.title || '';
-    artist = btnOrId.dataset.artist || '';
-  } else {
-    albumId = String(btnOrId || '');
-  }
-
+  let albumId = (btnOrId instanceof HTMLElement || (btnOrId && btnOrId.dataset)) ? (btnOrId.dataset.albumId || '') : String(btnOrId || '');
+  if (btnOrId && btnOrId.dataset) { title = btnOrId.dataset.title || title; artist = btnOrId.dataset.artist || artist; }
   showToast(playNow ? "Loading album to play..." : "Adding album to queue...", "⏳");
   try {
-    const res = await fetch("/api/guild/" + currentGuildId + "/play", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ album_id: albumId, play_now: playNow, title: title, artist: artist })
+    const res = await fetch("/api/guild/" + currentGuildId + "/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ album_id: albumId, play_now: playNow, title, artist }) });
+    const d = await res.json();
+    if (res.ok) { showToast(playNow ? `Playing album now! (${d.enqueued_count} tracks)` : `Added ${d.enqueued_count} tracks to queue!`, "💿"); pollGuildState(currentGuildId); }
+    else { showToast(d.error || "Failed to queue album", "⚠️"); }
+  } catch (e) { showToast("Error queuing album", "❌"); }
+}
+
+
+function updateAnchorBadge(p) {
+  const b = p.brain || {};
+  const anchor = b.vibe_anchor_artist || (p.current_track ? p.current_track.artist : "None");
+  const isLocked = Boolean(b.is_anchor_locked);
+  const nameEl = document.getElementById("anchorArtistName"); if (nameEl) nameEl.innerText = anchor;
+  const iconEl = document.getElementById("anchorLockIcon"); if (iconEl) iconEl.innerText = isLocked ? "🔒" : "🔓";
+  const badge = document.getElementById("anchorBadge"); if (badge) badge.classList.toggle("locked", isLocked);
+  const btnLock = document.getElementById("btnAnchorLock");
+  if (btnLock) { btnLock.innerText = isLocked ? "🔒 Locked" : "🔓 Auto"; btnLock.style.color = isLocked ? "#f43f5e" : "#4ade80"; }
+  const tAnchor = document.getElementById("telemetryAnchor");
+  if (tAnchor) tAnchor.innerHTML = `${escapeHtml(anchor)} <span style="font-size:0.75rem; color:${isLocked ? '#f43f5e' : '#4ade80'}; font-weight:700;">(${isLocked ? '🔒 Locked' : '🔓 Auto'})</span>`;
+  if (b.taste_profile) renderTasteProfile(b.taste_profile);
+}
+
+function toggleAnchorLock() {
+  currentBrainConfig.is_anchor_locked = !currentBrainConfig.is_anchor_locked;
+  const currArt = document.getElementById("trackArtist") ? document.getElementById("trackArtist").innerText : "";
+  if (currentBrainConfig.is_anchor_locked && (!currentBrainConfig.vibe_anchor_artist || currentBrainConfig.vibe_anchor_artist === "None")) {
+    if (currArt && currArt !== "Queue is idle") currentBrainConfig.vibe_anchor_artist = currArt;
+  }
+  sendBrainConfig({ is_anchor_locked: currentBrainConfig.is_anchor_locked, vibe_anchor_artist: currentBrainConfig.vibe_anchor_artist || "" });
+  showToast(currentBrainConfig.is_anchor_locked ? "Anchor Locked 🔒" : "Anchor Auto-Drift 🔓", "⚓");
+}
+
+function promptCustomAnchor() {
+  const curr = currentBrainConfig.vibe_anchor_artist || "";
+  const name = prompt("Enter artist name to anchor AI Autoplay DJ (e.g. Daft Punk):", curr);
+  if (name !== null) {
+    const trimmed = name.trim();
+    currentBrainConfig.vibe_anchor_artist = trimmed;
+    currentBrainConfig.is_anchor_locked = Boolean(trimmed);
+    sendBrainConfig({ vibe_anchor_artist: trimmed, is_anchor_locked: Boolean(trimmed) });
+    showToast(trimmed ? `Anchor set to: ${trimmed} 🔒` : "Anchor set to Auto 🔓", "⚓");
+  }
+}
+
+async function sendTasteFeedback(vote) {
+  if (!currentGuildId) { showToast("No server selected", "❌"); return; }
+  const currTitle = document.getElementById("trackTitle") ? document.getElementById("trackTitle").innerText : "";
+  const currArt = document.getElementById("trackArtist") ? document.getElementById("trackArtist").innerText : "";
+  if (!currTitle || currTitle === "Nothing Playing") { showToast("No track currently playing", "⚠️"); return; }
+  try {
+    const res = await fetch(`/api/guild/${currentGuildId}/feedback`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vote, artist: currArt, title: currTitle })
     });
     const d = await res.json();
-    if (res.ok) {
-      showToast(playNow ? `Playing album now! (${d.enqueued_count} tracks)` : `Added ${d.enqueued_count} tracks to queue!`, "💿");
-      pollGuildState(currentGuildId);
-    } else {
-      showToast(d.error || "Failed to queue album", "⚠️");
-    }
-  } catch (e) {
-    showToast("Error queuing album", "❌");
+    if (vote === "down") { showToast(`Disliked & skipped "${currArt}" 👎`, "🚫"); skipTrack(); }
+    else { showToast(`Loved vibe! Trained AI for "${currArt}" 👍`, "⭐"); }
+    if (d.taste_profile) renderTasteProfile(d.taste_profile);
+    pollGuildState(currentGuildId);
+  } catch (e) { showToast("Feedback failed", "❌"); }
+}
+
+function renderTasteProfile(tp) {
+  const pill = document.getElementById("tasteStatPill"), statTxt = document.getElementById("tasteStatText");
+  const total = (tp.likes_count || 0) + (tp.dislikes_count || 0);
+  if (pill && statTxt) {
+    if (total > 0) { pill.style.display = "inline-flex"; statTxt.innerText = `${total} trained (👍${tp.likes_count || 0} 👎${tp.dislikes_count || 0})`; }
+    else { pill.style.display = "none"; }
   }
+  const likesList = document.getElementById("tasteLikesList"), dislikesList = document.getElementById("tasteDislikesList");
+  if (likesList) {
+    const likes = tp.liked_artists || [];
+    likesList.innerHTML = likes.length ? likes.map(a => `<span class="tag-badge" style="background:rgba(34,197,94,0.15); color:#4ade80; border-color:rgba(34,197,94,0.3);">👍 ${escapeHtml(a)}</span>`).join(' ') : '<span style="color:var(--text-muted); font-size:0.75rem;">None yet. Thumbs up tracks to train!</span>';
+  }
+  if (dislikesList) {
+    const dislikes = tp.disliked_artists || [];
+    dislikesList.innerHTML = dislikes.length ? dislikes.map(a => `<span class="tag-badge" style="background:rgba(239,68,68,0.15); color:#f87171; border-color:rgba(239,68,68,0.3);">👎 ${escapeHtml(a)}</span>`).join(' ') : '<span style="color:var(--text-muted); font-size:0.75rem;">None (No artists banished)</span>';
+  }
+}
+
+async function resetTasteProfile() {
+  if (!confirm("Reset all AI learned artist likes and dislikes for this server?")) return;
+  try {
+    const res = await fetch(`/api/guild/${currentGuildId}/control`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reset_taste" })
+    });
+    const d = await res.json();
+    if (d.taste_profile) renderTasteProfile(d.taste_profile);
+    showToast("AI taste training reset to neutral", "🔄");
+    pollGuildState(currentGuildId);
+  } catch (e) { showToast("Reset failed", "⚠️"); }
 }
 
 window.onload = init;

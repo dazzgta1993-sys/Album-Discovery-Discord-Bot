@@ -955,5 +955,39 @@ window.playCrateAll = async function(shuffle = false, playNow = false) {
   } catch (e) { if (typeof showToast === "function") showToast("Failed to play crate", "❌"); }
 };
 
+window.syncCrateFeeds = async function() {
+  const btn = document.getElementById("btnSyncCrateFeeds");
+  if (btn) btn.innerHTML = "⏳ Syncing...";
+  try {
+    const pl = window.currentCratePlaylist || "Favorites";
+    const res = await postCrateAction({ action: "sync", playlist: pl });
+    if (res && res.ok) {
+      renderCrateUI(res.data);
+      if (typeof showToast === "function") showToast(`Auto-sync complete: ${res.data.total_new_tracks || 0} new track(s) found!`, "📡");
+    }
+  } catch (e) {
+    if (typeof showToast === "function") showToast("Sync error: " + e.message, "⚠️");
+  } finally {
+    if (btn) btn.innerHTML = "🔄 Sync Feeds";
+  }
+};
+
+window.promptSubscribeFeed = async function() {
+  const url = prompt("Enter YouTube Channel or Playlist URL to auto-sync (e.g. https://www.youtube.com/@Orryy/videos):");
+  if (!url || !url.trim()) return;
+  const pl = window.currentCratePlaylist || "Orryy All Uploads";
+  const name = prompt("Target playlist name:", pl);
+  if (!name || !name.trim()) return;
+  try {
+    const res = await postCrateAction({ action: "subscribe", url: url.trim(), target_playlist: name.trim() });
+    if (res && res.ok) {
+      if (typeof showToast === "function") showToast("Subscribed! Checking for new uploads...", "📡");
+      window.syncCrateFeeds();
+    }
+  } catch (e) {
+    if (typeof showToast === "function") showToast("Subscribe error: " + e.message, "⚠️");
+  }
+};
+
 setTimeout(() => { if (typeof window.loadCrate === "function") window.loadCrate("Favorites"); }, 1500);
 setInterval(() => { syncSaveCrateButtonState(); }, 1500);

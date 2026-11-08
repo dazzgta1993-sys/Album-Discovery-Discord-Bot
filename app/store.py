@@ -130,6 +130,19 @@ def init_db():
             )
         """)
         cursor.execute("""
+            CREATE TABLE IF NOT EXISTS crate_subscriptions (
+                guild_id TEXT NOT NULL,
+                feed_id TEXT NOT NULL,
+                feed_type TEXT NOT NULL DEFAULT 'youtube_channel',
+                source_url TEXT NOT NULL,
+                target_playlist TEXT NOT NULL,
+                display_name TEXT NOT NULL,
+                last_synced_at REAL NOT NULL,
+                auto_sync INTEGER DEFAULT 1,
+                PRIMARY KEY(guild_id, feed_id)
+            )
+        """)
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS taste_profiles (
                 guild_id TEXT NOT NULL,
                 artist TEXT NOT NULL,
@@ -687,6 +700,67 @@ def delete_crate_playlist(guild_id: str, playlist_name: str) -> dict:
         except Exception as exc:
             _log.warning(f"delete_crate_playlist error: {exc}")
     return get_crate_playlists(gid)
+
+
+def add_crate_subscription(guild_id: str, source_url: str, target_playlist: str, display_name: str = "", feed_type: str = "youtube_channel") -> dict:
+    """Register an auto-updating channel or playlist feed linked to a Crate playlist."""
+    import hashlib
+    gid = str(guild_id or "").strip()
+    url = str(source_url or "").strip()
+    pl = str(target_playlist or "Favorites").strip()[:60]
+    name = str(display_name or pl).strip()[:80]
+    feed_id = f"sub_{hashlib.md5((gid + url + pl).encode()).hexdigest()[:10]}"
+    now = time.time()
+    try:
+        with _lock, _get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO crate_subscriptions (guild_id, feed_id, feed_type, source_url, target_playlist, display_name, last_synced_at, auto_sync)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                ON CONFLICT(guild_id, feed_id) DO UPDATE SET
+                    source_url = ?, target_playlist = ?, display_name = ?
+            """, (gid, feed_id, feed_type, url, pl, name, now, url, pl, name))
+            conn.commit()
+    except Exception as exc:
+        _log.warning(f"add_crate_subscription error: {exc}")
+    return {"feed_id": feed_id, "playlist": pl, "display_name": name, "url": url}
+
+
+def get_crate_subscriptions(guild_id: str) -> list[dict]:
+    """Fetch all active auto-sync feeds for a guild."""
+    gid = str(guild_id or "").strip()
+    try:
+        with _lock, _get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM crate_subscriptions WHERE guild_id = ? ORDER BY last_synced_at DESC", (gid,))
+            return [dict(r) for r in cursor.fetchall()]
+    except Exception as exc:
+        _log.debug(f"get_crate_subscriptions notice: {exc}")
+        return []
+
+
+def remove_crate_subscription(guild_id: str, feed_id: str) -> bool:
+    """Remove an auto-sync feed."""
+    try:
+        with _lock, _get_connection() as conn:
+            conn.execute("DELETE FROM crate_subscriptions WHERE guild_id = ? AND feed_id = ?", (str(guild_id), str(feed_id)))
+            conn.commit()
+            return True
+    except Exception as exc:
+        _log.warning(f"remove_crate_subscription error: {exc}")
+        return False
+
+
+def update_crate_subscription_sync(guild_id: str, feed_id: str) -> bool:
+    """Update last_synced_at timestamp after a successful poll."""
+    try:
+        with _lock, _get_connection() as conn:
+            conn.execute("UPDATE crate_subscriptions SET last_synced_at = ? WHERE guild_id = ? AND feed_id = ?", (time.time(), str(guild_id), str(feed_id)))
+            conn.commit()
+            return True
+    except Exception as exc:
+        _log.debug(f"update_crate_subscription_sync notice: {exc}")
+        return False
 
 
 try:

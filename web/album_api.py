@@ -306,7 +306,8 @@ async def api_crate(request: web.Request) -> web.Response:
             "playlist": playlist,
             "playlists": pl_meta.get("playlists", []),
             "total_count": pl_meta.get("total_count", 0),
-            "tracks": tracks
+            "tracks": tracks,
+            "subscriptions": store.get_crate_subscriptions(str(gid))
         })
 
     try:
@@ -409,6 +410,28 @@ async def api_crate(request: web.Request) -> web.Response:
         elif not was_playing:
             asyncio.create_task(player.play_next())
         return web.json_response({"status": "ok", "enqueued_count": len(q_tracks), "total": total})
+
+    elif action == "sync":
+        from app.services import channel_poller
+        sync_res = await channel_poller.sync_all_subscriptions(bot, guild_id=str(gid))
+        pl_meta = store.get_crate_playlists(str(gid))
+        return web.json_response({
+            "status": "ok", "synced": True, "total_new_tracks": sync_res.get("total_new_tracks", 0),
+            "playlists": pl_meta.get("playlists", []), "tracks": store.get_crate_tracks(str(gid), playlist),
+            "subscriptions": store.get_crate_subscriptions(str(gid))
+        })
+
+    elif action == "subscribe":
+        s_url = str(data.get("url", "")).strip()
+        s_target = str(data.get("target_playlist") or playlist).strip()
+        s_name = str(data.get("display_name") or s_target).strip()
+        sub_info = store.add_crate_subscription(str(gid), s_url, s_target, s_name)
+        return web.json_response({"status": "ok", "subscription": sub_info, "subscriptions": store.get_crate_subscriptions(str(gid))})
+
+    elif action == "unsubscribe":
+        s_id = str(data.get("feed_id", "")).strip()
+        store.remove_crate_subscription(str(gid), s_id)
+        return web.json_response({"status": "ok", "subscriptions": store.get_crate_subscriptions(str(gid))})
 
     return web.json_response({"error": f"Unknown crate action: {action}"}, status=400)
 

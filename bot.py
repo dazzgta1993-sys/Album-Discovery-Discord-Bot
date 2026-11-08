@@ -113,6 +113,8 @@ class AlbumDiscoveryBot(commands.Bot):
         )
         await self.change_presence(status=discord.Status.online, activity=activity)
         asyncio.create_task(self._check_startup_autoplay())
+        from app.services import channel_poller
+        asyncio.create_task(channel_poller.start_poller_task(self))
 
     async def _check_startup_autoplay(self):
         """If startup_autoplay is enabled, automatically join active voice channel and begin playback."""

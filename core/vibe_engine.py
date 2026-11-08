@@ -203,16 +203,16 @@ async def fetch_next_vibe_track(player: 'GuildPlayer', seed_track: Optional['Aud
             # Wild Discovery: continuous rabbit-hole exploration without snapping back to starting anchor!
             target_art = seed_art or anchor_art
         else:  # balanced (Smart Vibe)
-            if anchor_art:
-                drift_threshold = getattr(player, "vibe_drift_freq", 3)
-                if player.consecutive_autoplay_count >= drift_threshold:
-                    target_art = anchor_art
-                elif player.consecutive_autoplay_count > 0 and random.random() < 0.6:
-                    target_art = anchor_art
-                else:
-                    target_art = seed_art
+            drift_threshold = getattr(player, "vibe_drift_freq", 3)
+            if player.consecutive_autoplay_count >= drift_threshold:
+                target_art = seed_art
+                if not getattr(player, "is_anchor_locked", False):
+                    player.vibe_anchor_artist = seed_art
+            elif anchor_art and player.consecutive_autoplay_count < drift_threshold:
+                target_art = anchor_art
             else:
                 target_art = seed_art
+
 
         log.info(f"[{player.guild.name}] Multi-Platform DJ [Mode: {player.vibe_mode.upper()}] exploring for '{target_art}' (seed: '{effective_track.title}', chain: {player.consecutive_autoplay_count})...")
         clean_mode = getattr(player, "explicit_filter", "allow") == "clean_only"

@@ -17,18 +17,21 @@ log = get_bot_logger("player")
 class AudioTrack:
     def __init__(self, title: str, artist: str, album: str = "", duration_seconds: int = 0, duration_str: str = "", cover_url: str = "", video_id: Optional[str] = None, stream_url: Optional[str] = None, requested_by: Optional[str] = None, source: str = "deezer", is_autoplay: bool = False):
         self.title, self.artist, self.album = title, artist, album
-        self.duration_seconds = duration_seconds
-        self.duration_str = duration_str or self._format_duration(duration_seconds)
+        self.duration_seconds = int(duration_seconds or 0)
+        if not self.duration_seconds and duration_str and ":" in duration_str:
+            try:
+                pts = [int(p) for p in duration_str.split(":") if p.strip().isdigit()]
+                self.duration_seconds = pts[0]*60 + pts[1] if len(pts) == 2 else (pts[0]*3600 + pts[1]*60 + pts[2] if len(pts) == 3 else 0)
+            except Exception: pass
+        self.duration_str = duration_str or self._format_duration(self.duration_seconds)
         self.cover_url, self.video_id, self.stream_url = cover_url, video_id, stream_url
         self.requested_by, self.source, self.is_autoplay = requested_by, source, is_autoplay
         self.stream_headers = {}
 
     @staticmethod
     def _format_duration(secs: int) -> str:
-        if not secs:
-            return "--:--"
-        m, s = divmod(int(secs), 60)
-        h, m = divmod(m, 60)
+        if not secs: return "--:--"
+        m, s = divmod(int(secs), 60); h, m = divmod(m, 60)
         return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
     def to_dict(self) -> dict:
@@ -54,12 +57,9 @@ class AccurateAudioSource(discord.PCMVolumeTransformer):
 
     def cleanup(self):
         try:
-            if hasattr(self.original, "cleanup"):
-                self.original.cleanup()
-            elif hasattr(self.original, "_process") and self.original._process:
-                self.original._process.kill()
-        except Exception as _ex:
-            log.debug(f"Source cleanup notice: {_ex}")
+            if hasattr(self.original, "cleanup"): self.original.cleanup()
+            elif hasattr(self.original, "_process") and self.original._process: self.original._process.kill()
+        except Exception as _ex: log.debug(f"Source cleanup notice: {_ex}")
 
 class GuildPlayer:
     def __init__(self, bot: discord.Client, guild: discord.Guild):
@@ -78,21 +78,15 @@ class GuildPlayer:
         self.audio_quality: str = "auto"
         
         self._is_playing: bool = False
-        self.play_start_time: float = 0.0
-        self.total_paused_time: float = 0.0
-        self.pause_start_time: float = 0.0
-        self._progress_task: Optional[asyncio.Task] = None
-        self._idle_task: Optional[asyncio.Task] = None
+        self.play_start_time, self.total_paused_time, self.pause_start_time = 0.0, 0.0, 0.0
+        self._progress_task, self._idle_task, self._active_source = None, None, None
         self._lock = asyncio.Lock()
-        self._active_source: Optional[AccurateAudioSource] = None
         self.current_message: Optional[discord.Message] = None
-        self._prewarmed_autoplay_track: Optional[AudioTrack] = None
-        self._deck3_autoplay_track: Optional[AudioTrack] = None
+        self._prewarmed_autoplay_track, self._deck3_autoplay_track = None, None
         self.vibe_anchor_artist: Optional[str] = None
         self.is_anchor_locked: bool = False
-        self.consecutive_autoplay_count: int = 0
+        self.consecutive_autoplay_count, self._consecutive_resolve_failures = 0, 0
         self.failed_tracks: set[str] = set()
-        self._consecutive_resolve_failures: int = 0
 
         # Brain Hub & Autoplay Control Engine
         self.vibe_mode: str = "balanced"  # "deep_dive", "collabs", "balanced", "discovery"
@@ -178,7 +172,13 @@ class GuildPlayer:
             elapsed = 0
 
         elapsed = max(0, elapsed)
-        total = self.current_track.duration_seconds
+        total = getattr(self.current_track, "duration_seconds", 0)
+        if (not total or total <= 0) and getattr(self.current_track, "duration_str", ""):
+            try:
+                pts = [int(p) for p in self.current_track.duration_str.split(":") if p.strip().isdigit()]
+                total = pts[0]*60 + pts[1] if len(pts) == 2 else (pts[0]*3600 + pts[1]*60 + pts[2] if len(pts) == 3 else 0)
+                self.current_track.duration_seconds = total
+            except Exception: pass
         if total > 0 and elapsed > total:
             elapsed = total
         return elapsed, total

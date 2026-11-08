@@ -7,16 +7,8 @@ function getActiveGuildId() {
   return "";
 }
 window.getActiveGuildId = getActiveGuildId;
-let serverStatus = null;
-let localElapsed = 0;
-let localTotal = 0;
-let isPlaying = false;
-let isPaused = false;
-let lastPollTimestamp = performance.now();
-let isSeeking = false;
-let currentAutoplay = true;
-let currentQuality = "auto";
-let preMuteVolume = 100;
+let serverStatus = null, localElapsed = 0, localTotal = 0, isPlaying = false, isPaused = false;
+let lastPollTimestamp = performance.now(), isSeeking = false, currentAutoplay = true, currentQuality = "auto", preMuteVolume = 100;
 let isMonitoring = localStorage.getItem("albumDiscoveryAudioMonitor") !== "false";
 let lastMonitoredTrack = "";
 window._lastDeck2Track = null;
@@ -223,6 +215,11 @@ async function pollGuildState(guildId) {
     }
     localElapsed = p.progress.elapsed || 0;
     localTotal = p.progress.total || 0;
+    if (localTotal <= 0 && p.current_track && p.current_track.duration && p.current_track.duration.includes(":")) {
+      const parts = p.current_track.duration.split(":").map(Number);
+      if (parts.length === 2 && !isNaN(parts[0])) localTotal = parts[0] * 60 + parts[1];
+      else if (parts.length === 3 && !isNaN(parts[0])) localTotal = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
     lastPollTimestamp = performance.now();
     renderSeeker();
     const btnAuto = document.getElementById("btnAutoplay");

@@ -10,7 +10,9 @@ built upon the "Album Discovery" music intelligence engine.
 Unlike traditional bots that blindly scrape arbitrary YouTube search queries,
 this system unites 9 multi-platform music engines, real-time editorial metadata,
 lossless studio taxonomy, an autonomous AI Autoplay Vibe DJ, an advanced Triple-Deck 
-audio pipeline with two-step zero-buffer preloading, and a live web Command Center at http://localhost:8905.
+audio pipeline with two-step zero-buffer preloading, an interactive Mastering Scope 
+& Acoustic Audio Lab, dynamic YouTube channel & artist feed auto-polling, and a 
+live web Command Center at http://localhost:8905.
 
 ================================================================================
 WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
@@ -23,7 +25,28 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
      with pre-resolved direct audio stream URLs for instant transitions, and Deck 3 is pre-cued 
      in the chute two steps ahead with full double-skip protection.
 
-2. 🧠 Multi-Platform Curated Autoplay DJ & Vibe Anchor:
+2. 🎚️ Mastering Scope & Acoustic Audio Lab (Real-Time DSP Telemetry):
+   - Full 48-band 32-bit float FFT frequency spectrum canvas with responsive peak-hold physics.
+   - Dual Stereo VU meters with real-time dBFS readings and -0.5 dB True-Peak limiter ceiling markers.
+   - 8 live pipeline telemetry metrics: Resampler Engine, Headroom Guard, Stream Buffer Flow,
+     Bitstream Codec, Dynamic Crest Factor, Headroom Margin, High-Freq Air Ceiling, and Clipping Events.
+   - Active True-Peak clipping detection & real-time crimson alert warning (⚠️ N clipping events detected).
+   - Interactive 1-click DSP Self-Check diagnostic suite.
+
+3. 🔄 Autonomous Channel Poller & Dynamic Feed Subscriptions (My Crate):
+   - Background channel poller (channel_poller.py) automatically monitors subscribed YouTube 
+     uploaders and artists (e.g. Orryy.) every 2 hours with exponential backoff.
+   - Zero hardcoding: completely customizable feed subscriptions persisted to SQLite WAL.
+   - Automatically synchronizes newly uploaded tracks directly into dedicated playlists in My Crate.
+   - Instant "Follow Feed", "Sync", and "Unsubscribe" actions from the Web Control Hub.
+
+4. 🚀 Zero-Jitter Live Stream Pipeline & True-Peak Ceiling:
+   - Direct real-time packet streaming eliminates speed-warping ("slow then fast"), pitch drift,
+     buffer underruns, and DC-offset pops.
+   - Dedicated -0.45 dB True-Peak Headroom Guard (volume=0.95) prevents inter-sample peaks from 
+     clipping on Discord's native Opus 48kHz stereo encoder.
+
+5. 🧠 Multi-Platform Curated Autoplay DJ & Vibe Anchor:
    - Traditional autoplay simply scrapes YouTube's algorithm and quickly drifts into 
      viral TikTok memes, amateur bedroom recordings, or unrelated genres.
    - This bot features a multi-tiered recommendation engine prioritizing Deezer 
@@ -35,7 +58,7 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
    - Anti-Junk Shield: Actively filters out hoodtrap, type beats, TikTok remixes, 
      karaoke, skits (<65s), and low-listen amateur spam.
 
-3. 🎧 Accurate Playback, Smart Queueing & Pause-Offset Synchronization:
+6. 🎧 Accurate Playback, Smart Queueing & Pause-Offset Synchronization:
    - Tracks real-time elapsed seconds with precise pause-duration accounting 
      (time.time() - play_start_time - total_paused_time).
    - Smart Queue Guard: /play automatically adds tracks to the queue when music is already 
@@ -44,7 +67,7 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
    - Ensures visual seeker bars, timestamp indicators, and dashboard telemetry stay 
      closely synchronized with Discord voice audio across pause and resume events.
 
-4. 🧬 Real-Time Session Music DNA & Acoustic Spectrum Visualizer:
+7. 🧬 Real-Time Session Music DNA & Acoustic Spectrum Visualizer:
    - 100% Dynamic Public Taxonomy Resolution: Classifies tracks across 10 core musical genres and 
      30+ subgenres via live MusicBrainz and Last.fm taxonomy graphs without static artist limits.
    - Heuristic Session Metrics: Estimates session Energy (0-100), Danceability (0-100), and 
@@ -53,26 +76,26 @@ WHAT MAKES THIS BOT UNIQUE (COMPETITIVE DIFFERENTIATORS)
    - Top DNA Influences: Maps contributing artists with tailored subgenre badges.
    - Thumbs Up / Down Training: Interactive feedback system persisting to SQLite taste profiles.
 
-5. 🎙️ Native Discord Voice Channel Status Synchronization:
+8. 🎙️ Native Discord Voice Channel Status Synchronization:
    - Automatically sets Discord's native voice channel status bar to the currently playing 
      song ("🎶 Artist - Title") without creating distracting spam messages in text channels.
    - Automatically clears when playback stops or the queue completes.
 
-6. 🌐 Unified 9-Platform Intelligence Ecosystem:
+9. 🌐 Unified 9-Platform Intelligence Ecosystem:
    - Seamlessly blends Deezer Studio Masters, YouTube Music, YouTube Live/Concerts, 
      Spotify catalogs, Apple Music / iTunes high-res covers, SoundCloud DJ mixes, 
      MusicBrainz archival discographies, and real-time Official UK/US Billboard charts.
 
-7. 🖥️ Studio Command Center Web Hub (http://localhost:8905) & Full 2-Way Sync:
-   - Every action in Discord (/dj, /volume, /quality, /loop, /shuffle, or embed buttons) and 
-     every click on the Web Dashboard stays 100% synchronized in real time and persists to SQLite.
-   - Full desktop-grade web application featuring:
-     * Fast-Play universal input bar (▶ Play Immediately or + Queue)
-     * 94 Curated High-Definition Cloud Radio Stations
-     * 67-Year Landmark Time Machine (1960 — 2026)
-     * Real-time pulsing soundwave visualizer
-     * Listen Live in Browser (low-latency Web Opus/MP3 audio monitor)
-     * Fluid mouse-wheel volume adjustment & universal Enter key shortcuts
+10. 🖥️ Studio Command Center Web Hub (http://localhost:8905) & Full 2-Way Sync:
+    - Every action in Discord (/dj, /volume, /quality, /loop, /shuffle, or embed buttons) and 
+      every click on the Web Dashboard stays 100% synchronized in real time and persists to SQLite.
+    - Full desktop-grade web application featuring:
+      * Fast-Play universal input bar (▶ Play Immediately or + Queue)
+      * 94 Curated High-Definition Cloud Radio Stations
+      * 67-Year Landmark Time Machine (1960 — 2026)
+      * Real-time pulsing soundwave visualizer & 48-band FFT Spectrum Analyzer
+      * Listen Live in Browser (low-latency Web Opus/MP3 audio monitor)
+      * Fluid mouse-wheel volume adjustment & universal Enter key shortcuts
 
 ================================================================================
 1. UNIFIED 9-ENGINE MUSIC ECOSYSTEM
@@ -135,7 +158,7 @@ with adaptive split-screen & mobile layouts (zero header overlap):
 2. Live Player Deck & Soundwave Visualizer:
    - Server selector with instant multi-guild state polling.
    - Quick Voice Channel Dropdown: One-click joining or switching into any voice channel.
-   - Frequency Soundwave Visualizer: Animated purple equalizer bars that pulse synchronously 
+   - Frequency Soundwave Visualizer: Animated equalizer bars that pulse synchronously 
      whenever music is actively playing in Discord.
    - Transport Buttons: Play/Pause, Skip, Shuffle, Loop, Stop.
    - Live PCM Volume Slider: Real-time slider with mouse-wheel scrolling support, 
@@ -155,14 +178,28 @@ with adaptive split-screen & mobile layouts (zero header overlap):
    - Smart Queue Flush & Autoplay Re-roll: Clear Queue flushes preloaded AI tracks, 
      and Shuffle re-rolls fresh recommendations from the anchor.
 
-4. 🕒 Playback History Tab:
+4. 🎛️ Audio Lab & Mastering Scope Tab:
+   - Real-Time 48kHz FFT Frequency Spectrum: 48-band canvas visualization with peak hold.
+   - Dual Stereo VU Peak & RMS Meters with dynamic warning on true-peak saturation.
+   - Real-time pipeline metrics: Resampler, Limiter, Stream Buffer Flow, Opus Codec,
+     Dynamic Crest Factor (dB), Headroom Margin (+11.3 dB), and High-Frequency Air Ceiling (19,200 Hz).
+   - Clipping Events Counter with instant crimson visual alert when samples exceed 0 dBFS.
+   - 1-Click "Run DSP Self-Check" button for automated diagnostic reporting.
+
+5. ❤️ My Crate & Channel Feed Subscriptions:
+   - Curated personal playlists and custom crate management.
+   - Channel Feeds integration: Follow any YouTube music channel or uploader (e.g. Orryy.).
+   - Auto-Poller: Periodically checks feeds for new uploads and imports them into your crate.
+   - Instant "Follow Feed", "Sync", and "Unsubscribe" actions right from the dashboard.
+
+6. 🕒 Playback History Tab:
    - Persistent reverse-chronological list of recently played tracks.
    - Displays track title, artist, album, runtime, artwork, and source badge.
    - One-click "▶ Replay" and "+ Queue" buttons.
    - 🗑️ "Clear History" Action: One-click header button with confirmation dialog to wipe 
      in-memory and SQLite playback history records immediately via POST /api/guild/{id}/control.
 
-5. 🧠 Vibe Engine & AI Autoplay Control Hub:
+7. 🧠 Vibe Engine & AI Autoplay Control Hub:
    - Live Telemetry Card: Shows current Vibe Anchor artist, lock state, autoplay chain count, 
      Deck 2 Standby state, Deck 3 Pipeline state, and the latest AI routing decision.
    - Vibe Discovery Matrix: Switch between Artist Deep Dive (100% same artist), 
@@ -175,30 +212,30 @@ with adaptive split-screen & mobile layouts (zero header overlap):
      and "Radio Edit Clean" (family-friendly FM radio edits).
    - 🎛️ Recommendation Engine Platform: One-click pills to lock the AI DJ to any of the 9 engines.
 
-6. ⏳ Time Machine Tab (1960 — 2026):
+8. ⏳ Time Machine Tab (1960 — 2026):
    - Interactive year selector and quick decade pills (60s, 70s, 80s, 90s, 00s, 10s, 20s).
    - Explores landmark releases and timeless album masterpieces across 67 musical years.
    - Genre filter pills for rapid sub-genre navigation.
    - 1-Click "▶ Play" and "+ Add" buttons to instantly stream historic albums into voice chat.
 
-7. 📻 Cloud DJ Radio Tab (94 Curated Stations):
+9. 📻 Cloud DJ Radio Tab (94 Curated Stations):
    - Live searchable station catalog spanning Lofi, Synthwave, Cyberpunk, 80s Retrowave, 
      Classic Rock, Ambient, Jazz, Hip-Hop, and Chillout.
    - Category filter pills with smooth horizontal scrolling.
    - Instant 1-Click "▶ Tune In" action queues up live stream mixes and continuous station feeds.
 
-8. 🔍 Search & Add Tab:
-   - Universal search across tracks, artists, albums, or direct URLs with Enter-key trigger.
-   - Unified engine selector matching all 9 platforms.
+10. 🔍 Search & Add Tab:
+    - Universal search across tracks, artists, albums, or direct URLs with Enter-key trigger.
+    - Unified engine selector matching all 9 platforms.
 
-9. 🔥 Trending Charts Tab:
-   - Live UK Official Top 50, US Billboard Hot 50, Global Hits, and Official Album Charts.
+11. 🔥 Trending Charts Tab:
+    - Live UK Official Top 50, US Billboard Hot 50, Global Hits, and Official Album Charts.
 
-10. 💿 Discography & Albums Tab:
+12. 💿 Discography & Albums Tab:
     - Deluxe vinyl showcase cards with glowing accents and disc depth shadow.
     - Expandable "📋 View Tracklist" trays and "▶ Play Release" / "+ Add Release" actions.
 
-11. 📜 Diagnostics & Live Logs Tab:
+13. 📜 Diagnostics & Live Logs Tab:
     - Color-coded real-time log inspector filtered by All, Searches, Audio, Bot, or Errors.
     - 🗑️ "Clear Logs" Action: One-click header button with confirmation dialog to flush 
       active diagnostic logs in real time via POST /api/logs.
@@ -218,6 +255,7 @@ with adaptive split-screen & mobile layouts (zero header overlap):
    - Double-Skip & Network Latency Protection: Even if members skip twice in rapid succession,
      playback begins instantly without buffering or waiting on API round-trips.
    - Dynamic Volume Transformer: Scales volume smoothly without resetting stream sockets.
+   - Headroom Guard (-0.45 dB / volume=0.95): Guarantees zero clipping events on Opus compression.
    - Configurable Target Bitrate: Auto (best available source stream), 128k, 192k, or 320k FFmpeg target encoding.
 
 2. Autonomous AI Vibe Engine (vibe_engine.py):
@@ -229,15 +267,21 @@ with adaptive split-screen & mobile layouts (zero header overlap):
    - Intelligent Anchor System: Preserves seed artist across autoplay skips with interactive lock.
    - Anti-Repeat Radio Cooldown: Remembers recent tracks to prevent artist or title spam.
 
-3. Persistent SQLite WAL Database (store.py):
+3. Background Channel Poller (channel_poller.py):
+   - Monitors subscribed YouTube channels, playlists, and artists every 2 hours.
+   - Extracts newly uploaded tracks via yt-dlp metadata flat-playlist extraction.
+   - Automatically populates custom crate playlists without interrupting active playback.
+
+4. Persistent SQLite WAL Database (store.py):
    - Location: data/cache.db
    - guild_settings: Non-destructively merges and persists volume, quality, loop mode, 
      autoplay, anchor lock, vibe mode, drift frequency, hit depth, cooldown, era filter, 
      explicit shield, energy dial, and engine source per guild.
+   - crate_subscriptions: Persists followed feed channels, display titles, and last check timestamps.
    - playback_history: Records played tracks with guild ID, metadata, and timestamps (plus instant clear).
    - api_cache & stream_resolutions: Caches MusicBrainz, Deezer, Spotify, and stream lookups with TTL.
 
-4. Title Sanitizer & Normalizer (normalizer.py & taxonomy.py):
+5. Title Sanitizer & Normalizer (normalizer.py & taxonomy.py):
    - Cleans remastered, deluxe, re-issue, spatial audio, and junk tags to ensure 
      clean studio audio matching.
 
@@ -280,10 +324,10 @@ Music Discovery & Discography:
 ===============================================================================
 5. SYSTEM REQUIREMENTS & SPECIFICATIONS
 ===============================================================================
-- Runtime: Python 3.12+ (64-bit)
+- Runtime: Python 3.10+ (Python 3.12 64-bit recommended)
 - Libraries: discord.py[voice]>=2.3.2, PyNaCl>=1.5.0, aiohttp>=3.9.0, yt-dlp>=2024.8.0, 
              ytmusicapi>=1.8.0, requests>=2.31.0, mutagen>=1.47.0, python-dotenv>=1.0.0, 
-             beautifulsoup4>=4.12.0
+             beautifulsoup4>=4.12.0, psutil>=5.9.0
 - Optional Headless Testing: playwright>=1.40.0
 - Audio Backend: Local FFmpeg binary (Opus 48kHz Stereo)
 - Code Integrity: All project files strictly maintained under 1,000 lines.

@@ -1,8 +1,11 @@
-# 🎧 Album Discovery — Autonomous Discord Music Bot & AI Radio Hub
+# 🎧 Album Discovery — Autonomous Discord Music Bot & Studio Command Center
 
 A broadcast-grade, standalone Discord music bot and real-time studio control center powered by the **Album Discovery** engine:
 
 - 🎛️ **Triple-Deck Pipeline Preloader:** Fast track transitions by pre-resolving Deck 2 direct stream URLs and Deck 3 2-step lookahead metadata in the background.
+- 🎚️ **Mastering Scope & Acoustic Audio Lab:** Real-time 48-band 32-bit float FFT frequency spectrum visualizer, dual stereo VU meters with -0.5 dB True-Peak limiter markers, and active digital clipping alerts.
+- 🔄 **Autonomous Channel Poller & Dynamic Feed Subscriptions:** Periodically polls followed YouTube uploaders and artists (e.g. *Orryy.*) in the background every 2 hours and automatically imports new uploads into dedicated playlists in **My Crate**.
+- 🚀 **Zero-Jitter Live Stream Pipeline:** Direct packet streaming eliminating speed-warping, pitch drift, buffer underruns, and discontinuity pops, protected by a dedicated -0.45 dB True-Peak Headroom Guard (`volume=0.95`).
 - 🧠 **Multi-Platform Vibe Discovery Matrix:** Curated & taste-scored autoplay across Deezer Artist Radio and YouTube Music with 4 exploration modes, anchor locking, artist cooldowns, era filters, and spam shields.
 - 🧬 **Session Music DNA & Taxonomy Visualizer:** Heuristic Energy, Danceability, Electronic/Acoustic estimates, and dynamic public taxonomy resolution (MusicBrainz/Deezer) across 10 genres & 30+ subgenres.
 - 🎙️ **Discord Voice Channel Status Synchronization:** Automatically updates Discord's native voice channel status to the currently playing song (`🎶 Artist - Title`) without text chat spam.
@@ -10,6 +13,27 @@ A broadcast-grade, standalone Discord music bot and real-time studio control cen
 - 📻 **Unified 9-Platform Streaming Ecosystem:** High-fidelity Opus 48kHz audio spanning Deezer Studio Masters, YouTube Music, YouTube Live/Concerts, Spotify catalog match, Apple Music / iTunes high-res covers, SoundCloud DJ sets, MusicBrainz taxonomy archives, and live Official UK/US Billboard charts.
 - ⏳ **Time Machine (1960–2026):** Explore and queue landmark historical releases across 67 consecutive musical eras.
 - 💿 **Complete Discography Classifier:** Browse studio albums, EPs, singles, mixtapes, collabs, and live releases with 1-click album queuing.
+
+---
+
+## 🎚️ Mastering Scope & Acoustic Audio Lab
+
+Inspect and monitor audio fidelity in real time from the **Audio Lab** tab on the Web Command Center:
+- **📊 48-Band FFT Frequency Spectrum:** High-resolution 32-bit float canvas visualizer with responsive peak-hold physics spanning Sub (20 Hz), Kick (100 Hz), Mids (500 Hz), Snare/Vox (2.5 kHz), Presence (6 kHz), Brilliance (12 kHz), and Air (20 kHz).
+- **🎛️ Dual Stereo VU Peak & RMS Meters:** Continuous true-peak and mean loudness indicators with interactive `-0.5 dBFS` limiter ceiling markers.
+- **🚨 Dynamic Clipping Events Counter:** Monitors signal saturation; immediately triggers a bright crimson warning badge (`⚠️ N clipping events detected`) and glowing alert box if true peaks cross 0 dBFS.
+- **⚡ 8 Real-Time Pipeline Metrics:** Resampler Engine, Headroom Guard, Stream Buffer Flow, Bitstream Codec, Crest Factor (dB), Headroom Margin (+11.3 dB), High-Freq Harmonic Ceiling (19,200 Hz), and Clipping Events.
+- **🛠️ DSP Self-Check:** 1-click automated diagnostic to verify pipeline health, sample rates, and headroom safety.
+
+---
+
+## 🔄 Dynamic Crate Follows & Background Auto-Poller
+
+Never miss fresh music from your favorite uploaders, producers, or record labels:
+- **Follow Any Feed:** Add YouTube channel handles (e.g. `@Orryy`), uploader URLs, or custom playlists in **❤️ My Crate**.
+- **Autonomous Background Poller:** Runs every 2 hours with exponential backoff and zero API quota exhaustion.
+- **Seamless Playlist Sync:** Automatically populates newly discovered uploads directly into dedicated Crate playlists without interrupting active playback.
+- **Instant Sync Controls:** Trigger immediate updates with the **Sync** button or manage subscriptions right from the dashboard.
 
 ---
 
@@ -44,6 +68,7 @@ The bot embeds a real-time reactive control center running inside the bot proces
 - **Trending Charts & Radio:** Stream official live UK Top 50, Billboard US charts, or 94 curated Cloud DJ stations.
 - **Discography Browser:** Inspect any artist's catalog classified by Studio Albums, EPs, Singles, Mixtapes, and Remixes.
 - **🗑️ History & Diagnostics Management:** 1-click **Clear History** (wipes both memory and SQLite history) and **Clear Logs** buttons with confirmation dialogs.
+- **🪵 Multi-Log Diagnostic Inspector:** Tail live logs filtered across All, Searches, Audio, Bot, and Errors.
 - **📱 Split-Screen & Responsive Design:** Optimized multi-column layout with zero header overlap on split-screen or tablet/mobile viewports.
 
 ---

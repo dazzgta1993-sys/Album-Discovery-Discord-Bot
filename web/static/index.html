@@ -671,6 +671,21 @@
             </div>
           </div>
 
+          <!-- DSP Self-Check Diagnostic Report Panel (Interactive) -->
+          <div id="dspDiagReportCard" style="display:none; background:#0b0d14; border:1px solid rgba(168,85,247,0.35); border-radius:var(--radius-md); padding:16px; margin-bottom:12px; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.1rem;">🛠️</span>
+                <span style="font-weight:700; font-size:0.95rem; color:#f8fafc;">DSP Pipeline &amp; Audio Health Self-Check</span>
+                <span id="dspDiagGradeBadge" class="safety-badge" style="background:rgba(34,197,94,0.15); color:#4ade80; border-color:rgba(34,197,94,0.4);">A+ Transmission Clean</span>
+              </div>
+              <button class="btn-small" onclick="closeDspDiagReport()" style="padding:2px 8px; font-size:0.75rem;">✕ Close</button>
+            </div>
+            <div id="dspDiagItemsList" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:10px;">
+              <!-- Dynamic check items rendered by audio_lab.js -->
+            </div>
+          </div>
+
           <!-- Real-time Canvas Spectrum Analyzer -->
           <div class="audiolab-canvas-card">
             <div class="audiolab-canvas-header">

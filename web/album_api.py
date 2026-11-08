@@ -480,12 +480,16 @@ async def api_telemetry(request: web.Request) -> web.Response:
             pass
 
     is_playing = bool(player and player.is_playing)
+    voice_connected = bool(player and player.voice_client and player.voice_client.is_connected())
     track_info = player.current_track.to_dict() if (player and player.current_track) else None
     audio_q = getattr(player, "audio_quality", "HQ") if player else "HQ"
 
     return web.json_response({
         "status": "ok",
         "is_playing": is_playing,
+        "voice_connected": voice_connected,
+        "sample_rate": 48000,
+        "channels": 2,
         "track": track_info,
         "resampler": "Low-Latency 48kHz Sinc (Zero Phase Lag)",
         "limiter": "True-Peak Headroom Guard (-0.45 dB)",

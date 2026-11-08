@@ -246,7 +246,9 @@ function filterRadioStations(query) {
   applyRadioFilters(q, currentRadioCategory);
 }
 
+let isTuningRadio = false;
 async function tuneInRadio(stationId, stationName) {
+  if (isTuningRadio) return;
   const guildId = getActiveGuildId();
   if (!guildId) {
     if (typeof showToast === "function") showToast("Select a server first", "❌");
@@ -270,6 +272,8 @@ async function tuneInRadio(stationId, stationName) {
     }
   } catch (e) {
     if (typeof showToast === "function") showToast("Failed to tune in", "❌");
+  } finally {
+    isTuningRadio = false;
   }
 }
 
@@ -464,36 +468,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, { passive: false });
   }
 
-  // Enter Key on Search inputs
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) {
-    searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (typeof executeSearch === "function") executeSearch();
-      }
-    });
-  }
-
-  const discoInput = document.getElementById("discoArtistInput");
-  if (discoInput) {
-    discoInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (typeof executeDiscographySearch === "function") executeDiscographySearch();
-      }
-    });
-  }
-
-  const fastPlayInput = document.getElementById("fastPlayInput");
-  if (fastPlayInput) {
-    fastPlayInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        executeFastPlay(true);
-      }
-    });
-  }
 });
 
 // Album Tracks Tray Toggle Extension
@@ -886,7 +860,7 @@ function renderCrateUI(data) {
   const placeholder = typeof ALBUM_PLACEHOLDER_SVG !== "undefined" ? ALBUM_PLACEHOLDER_SVG : "";
   list.innerHTML = tracks.map((t, idx) => {
     const safeKey = (t.track_key || `${(t.artist || '').toLowerCase()}:::${(t.title || '').toLowerCase()}`).replace(/'/g, "\\'");
-    const payload = JSON.stringify(t).replace(/'/g, "&#39;");
+    const tid = typeof window.registerTrackRef === "function" ? window.registerTrackRef(t) : "";
     return `<div class="track-item">
       <span style="font-weight:700; color:#fda4af; font-size:0.8rem; width:24px;">#${idx + 1}</span>
       <img class="track-thumb" src="${t.cover || placeholder}" onerror="this.onerror=null; this.src='${placeholder}';" />
@@ -895,8 +869,8 @@ function renderCrateUI(data) {
         <span class="item-artist">${typeof escapeHtml === "function" ? escapeHtml(t.artist) : t.artist} • ${t.duration || '--:--'} • <span class="tag-badge">${(t.source || 'SAVED').toUpperCase()}</span></span>
       </div>
       <div class="track-action-btns">
-        <button class="btn-small" title="Play Now" onclick='queueTrackDirect(${payload}, true)'>▶ Play</button>
-        <button class="btn-small" title="Add to Queue" onclick='queueTrackDirect(${payload}, false)'>+ Queue</button>
+        <button class="btn-small" title="Play Now" data-tid="${tid}" onclick="handleTrackBtn(this, 'play')">▶ Play</button>
+        <button class="btn-small" title="Add to Queue" data-tid="${tid}" onclick="handleTrackBtn(this, 'queue')">+ Queue</button>
         <button class="btn-small btn-danger" title="Remove from Crate" onclick="removeCrateTrack('${safeKey}')">✕</button>
       </div>
     </div>`;

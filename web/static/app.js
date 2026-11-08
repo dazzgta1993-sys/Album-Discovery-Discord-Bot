@@ -1,4 +1,12 @@
 let currentGuildId = ""; window.currentGuildId = "";
+function getActiveGuildId() {
+  if (currentGuildId) return currentGuildId;
+  if (window.currentGuildId) return window.currentGuildId;
+  const s = document.getElementById("serverSelect");
+  if (s && s.value) { currentGuildId = s.value; window.currentGuildId = s.value; return s.value; }
+  return "";
+}
+window.getActiveGuildId = getActiveGuildId;
 let serverStatus = null;
 let localElapsed = 0;
 let localTotal = 0;
@@ -318,6 +326,8 @@ async function pollGuildState(guildId) {
       } else if (currentTitle && (currentTitle !== lastMonitoredTrack || !audio.src || audio.paused)) {
         if (currentTitle !== lastMonitoredTrack || !audio.src) {
           lastMonitoredTrack = currentTitle;
+          if (!audio.paused) audio.pause();
+          audio.removeAttribute("src");
           audio.src = "/api/guild/" + currentGuildId + "/stream?t=" + Date.now();
         }
         const pPlay = audio.play();
@@ -370,45 +380,12 @@ function setPillActive(prefix, val) {
   if (btn) btn.classList.add("active");
 }
 
-function selectHitDepth(depth) {
-  currentBrainConfig.hit_depth = depth;
-  setPillActive("depth", depth);
-  sendBrainConfig({ hit_depth: depth });
-  showToast("Catalog Depth: " + depth.replace("_", " ").toUpperCase(), "📊");
-}
-function selectExplicit(pref) {
-  currentBrainConfig.explicit_filter = pref;
-  setPillActive("exp", pref);
-  sendBrainConfig({ explicit_filter: pref });
-  showToast("Explicit Shield: " + (pref === "allow" ? "ALLOWED" : "CLEAN ONLY"), "🛡️");
-}
-
-function selectArtistCooldown(n) {
-  const num = parseInt(n);
-  currentBrainConfig.artist_cooldown = num;
-  setPillActive("cooldown", num);
-  sendBrainConfig({ artist_cooldown: num });
-  showToast("No-Repeat Cooldown: " + num + " SONGS", "📻");
-}
-function selectEraFilter(era) {
-  currentBrainConfig.era_filter = era;
-  setPillActive("era", era);
-  sendBrainConfig({ era_filter: era });
-  showToast("Decade Filter: " + era.toUpperCase(), "⏳");
-}
-
-function selectVibeEnergy(energy) {
-  currentBrainConfig.vibe_energy = energy;
-  setPillActive("energy", energy);
-  sendBrainConfig({ vibe_energy: energy });
-  showToast("Energy Flow: " + energy.toUpperCase(), "🌊");
-}
-function selectEngineSource(source) {
-  currentBrainConfig.vibe_engine_source = source;
-  setPillActive("engine", source);
-  sendBrainConfig({ vibe_engine_source: source });
-  showToast("Engine: " + source.toUpperCase(), "🎛️");
-}
+function selectHitDepth(depth) { currentBrainConfig.hit_depth = depth; setPillActive("depth", depth); sendBrainConfig({ hit_depth: depth }); showToast("Catalog Depth: " + depth.replace("_", " ").toUpperCase(), "📊"); }
+function selectExplicit(pref) { currentBrainConfig.explicit_filter = pref; setPillActive("exp", pref); sendBrainConfig({ explicit_filter: pref }); showToast("Explicit Shield: " + (pref === "allow" ? "ALLOWED" : "CLEAN ONLY"), "🛡️"); }
+function selectArtistCooldown(n) { const num = parseInt(n); currentBrainConfig.artist_cooldown = num; setPillActive("cooldown", num); sendBrainConfig({ artist_cooldown: num }); showToast("No-Repeat Cooldown: " + num + " SONGS", "📻"); }
+function selectEraFilter(era) { currentBrainConfig.era_filter = era; setPillActive("era", era); sendBrainConfig({ era_filter: era }); showToast("Decade Filter: " + era.toUpperCase(), "⏳"); }
+function selectVibeEnergy(energy) { currentBrainConfig.vibe_energy = energy; setPillActive("energy", energy); sendBrainConfig({ vibe_energy: energy }); showToast("Energy Flow: " + energy.toUpperCase(), "🌊"); }
+function selectEngineSource(source) { currentBrainConfig.vibe_engine_source = source; setPillActive("engine", source); sendBrainConfig({ vibe_engine_source: source }); showToast("Engine: " + source.toUpperCase(), "🎛️"); }
 function toggleDeck2Pref() {
   currentBrainConfig.deck2_enabled = !currentBrainConfig.deck2_enabled;
   const btn = document.getElementById("btnDeck2Toggle");
@@ -448,9 +425,10 @@ function toggleStartupAutoplayPref() {
 }
 
 async function sendBrainConfig(partial) {
-  if (!currentGuildId) return;
+  const gid = getActiveGuildId();
+  if (!gid) return;
   try {
-    await fetch("/api/guild/" + currentGuildId + "/control", {
+    await fetch("/api/guild/" + gid + "/control", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "set_brain_config", ...partial })
@@ -562,7 +540,10 @@ function toggleAudioMonitor() {
   }
 }
 function togglePlayPause() {
-  if (!currentGuildId) return;
+  const gid = getActiveGuildId();
+  if (!gid) { showToast("No server selected", "❌"); return; }
+  if (window._playPauseDebounce && Date.now() - window._playPauseDebounce < 350) return;
+  window._playPauseDebounce = Date.now();
   isPlaying = !isPlaying; isPaused = !isPlaying;
   const btn = document.getElementById("btnPlayPause"); if (btn) btn.innerText = (isPlaying && !isPaused) ? "\u23f8" : "\u25b6";
   const monAudio = document.getElementById("browserMonitorAudio");
@@ -571,7 +552,8 @@ function togglePlayPause() {
 }
 
 function skipTrack() {
-  if (!currentGuildId) return;
+  const gid = getActiveGuildId();
+  if (!gid) { showToast("No server selected", "❌"); return; }
   if (window._skipDebounce && Date.now() - window._skipDebounce < 800) {
     return;
   }
@@ -599,9 +581,10 @@ function skipTrack() {
 }
 
 async function sendControl(action, value = null) {
-  if (!currentGuildId) return;
+  const gid = getActiveGuildId();
+  if (!gid) { showToast("No server selected", "❌"); return; }
   try {
-    await fetch("/api/guild/" + currentGuildId + "/control", {
+    await fetch("/api/guild/" + gid + "/control", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, value })
@@ -653,28 +636,36 @@ function toggleMute() {
 }
 
 async function joinSelectedVoice() {
-  const select = document.getElementById("quickVcSelect");
-  if (!select || !select.value) return;
-  await fetch("/api/guild/" + currentGuildId + "/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "join_voice", channel_id: select.value }) });
-  showToast("Joined voice channel 🔊");
-  setTimeout(() => pollGuildState(currentGuildId), 600);
+  const gid = getActiveGuildId(); if (!gid) { showToast("No server selected", "❌"); return; }
+  const select = document.getElementById("quickVcSelect"); if (!select || !select.value) return;
+  try { await fetch("/api/guild/" + gid + "/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "join_voice", channel_id: select.value }) }); showToast("Joined voice channel 🔊"); setTimeout(() => pollGuildState(gid), 600); } catch (e) { showToast("Failed to join voice", "❌"); }
 }
-async function removeQueueItem(index) { await fetch("/api/guild/" + currentGuildId + "/queue/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index }) }); showToast("Track removed from queue"); pollGuildState(currentGuildId); }
-async function clearQueue() { if (!confirm("Are you sure you want to clear the entire queue?")) return; await fetch("/api/guild/" + currentGuildId + "/queue/clear", { method: "POST" }); showToast("Queue cleared"); pollGuildState(currentGuildId); }
-async function clearHistory() { if (!confirm("Clear playback history and reset session DNA?")) return; await fetch("/api/guild/" + currentGuildId + "/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "clear_history" }) }); showToast("Playback history cleared"); pollGuildState(currentGuildId); if (typeof window.refreshMusicDna === "function") setTimeout(window.refreshMusicDna, 200); }
-async function moveQueueItem(from_index, to_index) { await fetch("/api/guild/" + currentGuildId + "/queue/move", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from_index, to_index }) }); pollGuildState(currentGuildId); }
+async function removeQueueItem(index) {
+  const gid = getActiveGuildId(); if (!gid) return;
+  try { await fetch("/api/guild/" + gid + "/queue/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index }) }); showToast("Track removed from queue"); pollGuildState(gid); } catch (e) { showToast("Failed to remove track", "❌"); }
+}
+async function clearQueue() {
+  const gid = getActiveGuildId(); if (!gid) return; if (!confirm("Are you sure you want to clear the entire queue?")) return;
+  try { await fetch("/api/guild/" + gid + "/queue/clear", { method: "POST" }); showToast("Queue cleared"); pollGuildState(gid); } catch (e) { showToast("Failed to clear queue", "❌"); }
+}
+async function clearHistory() {
+  const gid = getActiveGuildId(); if (!gid) return; if (!confirm("Clear playback history and reset session DNA?")) return;
+  try { await fetch("/api/guild/" + gid + "/control", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "clear_history" }) }); showToast("Playback history cleared"); pollGuildState(gid); if (typeof window.refreshMusicDna === "function") setTimeout(window.refreshMusicDna, 200); } catch (e) { showToast("Failed to clear history", "❌"); }
+}
+async function moveQueueItem(from_index, to_index) {
+  const gid = getActiveGuildId(); if (!gid) return;
+  try { await fetch("/api/guild/" + gid + "/queue/move", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ from_index, to_index }) }); pollGuildState(gid); } catch (e) { console.warn("Move queue item notice:", e); }
+}
 async function queuePlayNow(index) {
+  const gid = getActiveGuildId(); if (!gid) return;
   const qItem = document.querySelectorAll("#queueList .track-item")[index];
   if (qItem) {
-    const t = qItem.querySelector(".item-title");
-    const a = qItem.querySelector(".item-artist");
+    const t = qItem.querySelector(".item-title"), a = qItem.querySelector(".item-artist");
     if (t) document.getElementById("trackTitle").innerText = t.innerText;
     if (a) document.getElementById("trackArtist").innerText = a.innerText;
     localElapsed = 0;
   }
-  await fetch("/api/guild/" + currentGuildId + "/queue/play_now", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index }) });
-  showToast("Playing track now ▶");
-  pollGuildState(currentGuildId);
+  try { await fetch("/api/guild/" + gid + "/queue/play_now", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ index }) }); showToast("Playing track now ▶"); pollGuildState(gid); } catch (e) { showToast("Failed to play track", "❌"); }
 }
 async function executeSearch() {
   const query = document.getElementById("searchInput").value.trim();
@@ -685,6 +676,10 @@ async function executeSearch() {
   try {
     const res = await fetch("/api/search?q=" + encodeURIComponent(query) + "&source=" + source);
     const data = await res.json();
+    if (!res.ok || data.error) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>${escapeHtml(data.error || "Search failed")}</div></div>`;
+      return;
+    }
     const results = data.results || [];
     if (results.length === 0) {
       container.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><div>No tracks found for "${escapeHtml(query)}". Try another search query!</div></div>`;
@@ -709,14 +704,15 @@ function registerTrackRef(t) { const id = "trk_" + Math.random().toString(36).sl
 function handleTrackBtn(btn, action) { const t = window._trackRegistry.get(btn.getAttribute("data-tid")); if (!t) return; if (action === "crate") saveTrackToCrate(t); else if (action === "play") queueTrackDirect(t, true); else if (action === "queue") queueTrackDirect(t, false); }
 window.registerTrackRef = registerTrackRef; window.handleTrackBtn = handleTrackBtn;
 async function queueTrackDirect(track, playNow = false) {
-  if (!currentGuildId) currentGuildId = (document.getElementById("serverSelect") || {}).value || "";
-  window.currentGuildId = currentGuildId;
-  if (!currentGuildId) { showToast("No server selected", "❌"); return; }
+  const gid = getActiveGuildId();
+  if (!gid) { showToast("No server selected", "❌"); return; }
+  if (window._queueTrackDebounce && Date.now() - window._queueTrackDebounce < 250) return;
+  window._queueTrackDebounce = Date.now();
   try {
     const body = { title: track.title, artist: track.artist, album: track.album || "", cover: track.cover || "", duration_seconds: track.duration_seconds || 0, video_id: track.video_id || null, source: track.source || "deezer", play_now: playNow };
-    const res = await fetch("/api/guild/" + currentGuildId + "/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const res = await fetch("/api/guild/" + gid + "/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const d = await res.json();
-    if (res.ok) { showToast(playNow ? "Playing now ▶" : "Added to queue (#" + d.position + ")", "🎵"); pollGuildState(currentGuildId); }
+    if (res.ok) { showToast(playNow ? "Playing now ▶" : "Added to queue (#" + d.position + ")", "🎵"); pollGuildState(gid); }
     else { showToast(d.error || "Failed to play", "⚠️"); }
   } catch (e) { showToast("Playback request error", "❌"); }
 }
@@ -817,6 +813,10 @@ async function executeDiscographySearch() {
   try {
     const res = await fetch("/api/discography?artist=" + encodeURIComponent(artist));
     const data = await res.json();
+    if (!res.ok || data.error) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><div>${escapeHtml(data.error || "Failed to load discography")}</div></div>`;
+      return;
+    }
     currentDiscographyData = data;
     if (!data.albums || data.albums.length === 0) {
       container.innerHTML = `<div class="empty-state"><div class="empty-icon">❌</div><div>No discography found for "${escapeHtml(artist)}".</div></div>`;
@@ -880,16 +880,17 @@ function queueTrackFromData(btn, playNow = false) {
   }
 }
 async function queueAlbumDirect(btnOrId, playNow = false, title = '', artist = '') {
-  if (!currentGuildId) currentGuildId = (document.getElementById("serverSelect") || {}).value || "";
-  window.currentGuildId = currentGuildId;
-  if (!currentGuildId) { showToast("No server selected", "❌"); return; }
+  const gid = getActiveGuildId();
+  if (!gid) { showToast("No server selected", "❌"); return; }
+  if (window._queueAlbumDebounce && Date.now() - window._queueAlbumDebounce < 500) return;
+  window._queueAlbumDebounce = Date.now();
   let albumId = (btnOrId instanceof HTMLElement || (btnOrId && btnOrId.dataset)) ? (btnOrId.dataset.albumId || '') : String(btnOrId || '');
   if (btnOrId && btnOrId.dataset) { title = btnOrId.dataset.title || title; artist = btnOrId.dataset.artist || artist; }
   showToast(playNow ? "Loading album to play..." : "Adding album to queue...", "⏳");
   try {
-    const res = await fetch("/api/guild/" + currentGuildId + "/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ album_id: albumId, play_now: playNow, title, artist }) });
+    const res = await fetch("/api/guild/" + gid + "/play", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ album_id: albumId, play_now: playNow, title, artist }) });
     const d = await res.json();
-    if (res.ok) { showToast(playNow ? `Playing album now! (${d.enqueued_count} tracks)` : `Added ${d.enqueued_count} tracks to queue!`, "💿"); pollGuildState(currentGuildId); }
+    if (res.ok) { showToast(playNow ? `Playing album now! (${d.enqueued_count} tracks)` : `Added ${d.enqueued_count} tracks to queue!`, "💿"); pollGuildState(gid); }
     else { showToast(d.error || "Failed to queue album", "⚠️"); }
   } catch (e) { showToast("Error queuing album", "❌"); }
 }
@@ -968,9 +969,11 @@ function renderTasteProfile(tp) {
 }
 
 async function resetTasteProfile() {
+  const gid = getActiveGuildId();
+  if (!gid) { showToast("No server selected", "❌"); return; }
   if (!confirm("Reset all AI learned artist likes and dislikes for this server?")) return;
   try {
-    const res = await fetch(`/api/guild/${currentGuildId}/control`, {
+    const res = await fetch(`/api/guild/${gid}/control`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "reset_taste" })
     });
@@ -981,4 +984,9 @@ async function resetTasteProfile() {
   } catch (e) { showToast("Reset failed", "⚠️"); }
 }
 
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}
 window.onload = init;

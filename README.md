@@ -112,7 +112,7 @@ Before running the bot, ensure you have:
 
 ---
 
-## 💬 Slash Commands Reference (25 Commands)
+## 💬 Slash Commands Reference (26 Commands)
 
 ### 🎵 Playback, Crate & Audio Controls
 - `/play <query> [source]` — Plays immediately if nothing is playing, or **automatically adds to the queue** if music is already playing (supports tracks, albums, and YouTube/Spotify/SoundCloud/Deezer URLs across all 9 engines).
@@ -123,6 +123,7 @@ Before running the bot, ensure you have:
 - `/stop` — Stops audio, clears the queue, and disconnects from voice.
 - `/queue` — Displays the current queue with track durations and upcoming count.
 - `/nowplaying` — Rich embed with high-res artwork, live progress scrubber, and interactive playback buttons (`⏯️`, `⏭️`, `🔀`, `🔁`, `⏹️`, `❤️ Save to Crate`).
+- `/setchannel [channel]` — Binds or clears a dedicated text channel for the live interactive Now Playing card (leave empty to keep chat silent & clean).
 - `/volume <1-100>` — Sets the playback volume dynamically (persisted and synced with Web Hub).
 - `/quality <auto | 128k | 192k | 320k>` — Switches target FFmpeg audio transcode bitrate and stream format preference (persisted and synced with Web Hub).
 - `/shuffle` — Shuffles the server music queue (or re-rolls Deck 2 & Deck 3 AI autoplay tracks when the queue is empty).

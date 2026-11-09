@@ -1,3 +1,4 @@
+from typing import Optional
 import asyncio
 import re
 import discord
@@ -878,6 +879,30 @@ class MusicCog(commands.Cog, name="Music"):
         await self._send_notice(interaction, embed=embed, delay=4.5)
         if not was_playing:
             asyncio.create_task(player.play_next())
+
+    @app_commands.command(name="setchannel", description="Bind or clear a dedicated text channel for the live interactive Now Playing card.")
+    @app_commands.describe(channel="Text channel to bind (leave empty to clear and keep chat silent)")
+    async def setchannel(self, interaction: discord.Interaction, channel: Optional[discord.TextChannel] = None):
+        player = self.bot.player_manager.get_player(interaction.guild)
+        from core.announcer import set_bound_channel, announce_track
+        if channel:
+            set_bound_channel(player, str(channel.id))
+            embed = discord.Embed(
+                title="📢 Channel Announcer Bound",
+                description=f"Live interactive player card bound to {channel.mention}!\nSongs played from Discord or the Web Hub will update here automatically.",
+                color=EMBED_COLOR
+            )
+            await interaction.response.send_message(embed=embed)
+            if player.current_track and player.is_playing:
+                await announce_track(player, player.current_track)
+        else:
+            set_bound_channel(player, None)
+            embed = discord.Embed(
+                title="🔇 Channel Announcer Cleared",
+                description="Live card unbound. The bot will keep Discord text chat completely quiet & clean.",
+                color=EMBED_COLOR
+            )
+            await interaction.response.send_message(embed=embed)
 
 
 async def setup(bot: commands.Bot):

@@ -748,53 +748,9 @@ class GuildPlayer:
         return embed
 
     async def _send_now_playing_message(self, track: AudioTrack):
-        if not self.text_channel:
-            return
         try:
-            from .ui import PlayerControlsView
-            embed = self._build_now_playing_embed(track)
-            view = PlayerControlsView(self)
-
-            # Reconnection / Post-Restart Recovery: Search recent history for previous bot player card
-            if not self.current_message and self.text_channel:
-                try:
-                    async for m in self.text_channel.history(limit=25):
-                        if m.author == self.bot.user and m.embeds and m.components:
-                            self.current_message = m
-                            break
-                except Exception as ex:
-                    log.debug(f"History search notice: {ex}")
-
-            # Resilient Drift & In-Place Edit Handler
-            drifted = False
-
-            if not self.current_message:
-                drifted = True
-            else:
-                try:
-                    drift_count = 0
-                    async for _ in self.text_channel.history(limit=15, after=self.current_message):
-                        drift_count += 1
-                        if drift_count >= 10:
-                            drifted = True
-                            break
-                except (discord.NotFound, discord.HTTPException):
-                    # Card was manually deleted or message ID is invalid
-                    drifted = True
-
-            if drifted:
-                if self.current_message:
-                    try:
-                        await self.current_message.delete()
-                    except (discord.NotFound, discord.HTTPException):
-                        pass
-                self.current_message = await self.text_channel.send(embed=embed, view=view)
-            else:
-                try:
-                    await self.current_message.edit(embed=embed, view=view)
-                except discord.NotFound:
-                    # Card was removed between check and edit; spawn a replacement
-                    self.current_message = await self.text_channel.send(embed=embed, view=view)
+            from core.announcer import announce_track
+            await announce_track(self, track)
         except Exception as e:
             log.warning(f"Failed to send Now Playing embed: {e}")
 

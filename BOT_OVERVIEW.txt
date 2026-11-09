@@ -286,7 +286,7 @@ with adaptive split-screen & mobile layouts (zero header overlap):
      clean studio audio matching.
 
 ===============================================================================
-4. DISCORD SLASH COMMANDS (25 Active Commands)
+4. DISCORD SLASH COMMANDS (26 Active Commands)
 ===============================================================================
 
 Playback & Audio Controls:
@@ -298,6 +298,7 @@ Playback & Audio Controls:
 - /stop                         : Stops playback, clears queue, and disconnects from voice.
 - /queue                        : Displays paginated queue with runtime stats.
 - /nowplaying                   : Displays rich embed with interactive control buttons (including ❤️ Save to Crate).
+- /setchannel [channel]         : Binds or clears a dedicated text channel for the live interactive Now Playing card.
 - /volume <1-100>               : Sets volume percentage in real time (synced with Web Hub).
 - /quality <auto|128k|192k|320k>: Switches streaming bitrate dynamically (synced with Web Hub).
 - /shuffle                      : Shuffles the queue (or re-rolls Deck 2 & Deck 3 AI tracks).

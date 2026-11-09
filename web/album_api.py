@@ -504,3 +504,44 @@ async def api_telemetry(request: web.Request) -> web.Response:
         "deck3_status": "Cued (2-Step Pipeline)" if (player and getattr(player, "deck3_track", None)) else "Standby",
     })
 
+
+async def api_channel_binding(request: web.Request) -> web.Response:
+    """Get or update the bound Discord text channel for live player card announcements."""
+    gid_str = request.match_info.get("guild_id")
+    bot = request.app.get("bot")
+    guild, player = None, None
+    if bot and gid_str:
+        try:
+            guild = bot.get_guild(int(gid_str))
+            if guild and hasattr(bot, "player_manager"):
+                player = bot.player_manager.get_player(guild)
+        except Exception:
+            pass
+
+    if not guild or not player:
+        return web.json_response({"error": "Guild not found"}, status=404)
+
+    from core.announcer import get_bound_channel_id, set_bound_channel, announce_track
+
+    if request.method == "POST":
+        try:
+            data = await request.json()
+            target_id = data.get("channel_id")
+            set_bound_channel(player, target_id)
+            if target_id and player.current_track and player.is_playing:
+                asyncio.create_task(announce_track(player, player.current_track))
+        except Exception as ex:
+            log.warning(f"Error updating channel binding: {ex}")
+
+    bound_id = get_bound_channel_id(player)
+    bound_ch = guild.get_channel(int(bound_id)) if bound_id else None
+    channels = [{"id": str(c.id), "name": c.name} for c in guild.text_channels]
+
+    return web.json_response({
+        "status": "ok",
+        "bound_channel_id": bound_id,
+        "bound_channel_name": bound_ch.name if bound_ch else None,
+        "text_channels": channels
+    })
+
+

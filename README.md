@@ -69,6 +69,7 @@ The bot embeds a real-time reactive control center running inside the bot proces
 - **Discography Browser:** Inspect any artist's catalog classified by Studio Albums, EPs, Singles, Mixtapes, and Remixes.
 - **🗑️ History & Diagnostics Management:** 1-click **Clear History** (wipes both memory and SQLite history) and **Clear Logs** buttons with confirmation dialogs.
 - **🪵 Multi-Log Diagnostic Inspector:** Tail live logs filtered across All, Searches, Audio, Bot, and Errors.
+- **⚙️ Master Studio Settings & System Controls:** Configure default volume scale, audio bitrates (128k to 320k), inactivity disconnect timers, startup auto-join toggles, Discord broadcast channel binding, and inspect real-time process RAM/CPU hardware metrics.
 - **📱 Split-Screen & Responsive Design:** Optimized multi-column layout with zero header overlap on split-screen or tablet/mobile viewports.
 
 ---

@@ -34,6 +34,7 @@ function switchTab(tabId, btn) {
   if (target) target.classList.add("active");
   if (tabId === "charts") loadCharts();
   if (tabId === "audiolab" && typeof initAudioLab === "function") initAudioLab();
+  if (tabId === "settings" && typeof loadStudioSettings === "function") loadStudioSettings();
   if (tabId === "logs") loadLogs(true);
   if (tabId === "radio" && typeof loadCloudRadio === "function") loadCloudRadio();
   if (tabId === "timemachine" && typeof loadTimeMachine === "function") { const s = document.getElementById("tmYearSelect"); loadTimeMachine(s ? s.value : 1999); }

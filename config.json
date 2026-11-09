@@ -1,7 +1,7 @@
 {
   "command_prefix": "!",
   "default_volume": 1.0,
-  "idle_disconnect_seconds": 300,
+  "idle_disconnect_seconds": 600,
   "autoplay_dj": true,
   "startup_autoplay": true,
   "embed_color": "9d4edd",

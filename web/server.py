@@ -956,10 +956,10 @@ def create_web_app(bot: discord.Client) -> web.Application:
     app["bot"] = bot
 
     # Routes
-    from web.album_api import api_dna, api_discography, api_timemachine, api_radio, api_crate, api_cover_proxy, api_telemetry, api_channel_binding
-    for p, h in [("/", handle_index), ("/api/status", api_status), ("/api/guilds", api_status), ("/api/guild/{guild_id}", api_guild_state), ("/api/search", api_search), ("/api/charts", api_charts), ("/api/cover", api_cover_proxy), ("/api/discography", api_discography), ("/api/album/tracks", api_album_tracks), ("/api/guild/{guild_id}/dna", api_dna), ("/api/guild/{guild_id}/crate", api_crate), ("/api/logs", api_logs), ("/api/timemachine", api_timemachine), ("/api/radio", api_radio), ("/api/guild/{guild_id}/stream", api_stream), ("/api/guild/{guild_id}/telemetry", api_telemetry), ("/api/guild/{guild_id}/channel", api_channel_binding)]:
+    from web.album_api import api_dna, api_discography, api_timemachine, api_radio, api_crate, api_cover_proxy, api_telemetry, api_channel_binding, api_system_settings, api_system_action
+    for p, h in [("/", handle_index), ("/api/status", api_status), ("/api/guilds", api_status), ("/api/guild/{guild_id}", api_guild_state), ("/api/search", api_search), ("/api/charts", api_charts), ("/api/cover", api_cover_proxy), ("/api/discography", api_discography), ("/api/album/tracks", api_album_tracks), ("/api/guild/{guild_id}/dna", api_dna), ("/api/guild/{guild_id}/crate", api_crate), ("/api/logs", api_logs), ("/api/timemachine", api_timemachine), ("/api/radio", api_radio), ("/api/guild/{guild_id}/stream", api_stream), ("/api/guild/{guild_id}/telemetry", api_telemetry), ("/api/guild/{guild_id}/channel", api_channel_binding), ("/api/system/settings", api_system_settings)]:
         app.router.add_get(p, h)
-    for p, h in [("/api/guild/{guild_id}/control", api_control), ("/api/guild/{guild_id}/feedback", api_feedback), ("/api/guild/{guild_id}/queue/{op}", api_queue_action), ("/api/guild/{guild_id}/play", api_play), ("/api/guild/{guild_id}/crate", api_crate), ("/api/logs", api_logs), ("/api/guild/{guild_id}/channel", api_channel_binding)]:
+    for p, h in [("/api/guild/{guild_id}/control", api_control), ("/api/guild/{guild_id}/feedback", api_feedback), ("/api/guild/{guild_id}/queue/{op}", api_queue_action), ("/api/guild/{guild_id}/play", api_play), ("/api/guild/{guild_id}/crate", api_crate), ("/api/logs", api_logs), ("/api/guild/{guild_id}/channel", api_channel_binding), ("/api/system/settings", api_system_settings), ("/api/system/action", api_system_action)]:
         app.router.add_post(p, h)
 
     if os.path.exists(STATIC_DIR):

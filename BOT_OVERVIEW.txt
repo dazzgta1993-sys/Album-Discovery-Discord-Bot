@@ -240,6 +240,16 @@ with adaptive split-screen & mobile layouts (zero header overlap):
     - 🗑️ "Clear Logs" Action: One-click header button with confirmation dialog to flush 
       active diagnostic logs in real time via POST /api/logs.
 
+14. ⚙️ Master Studio Settings & System Control Station Tab:
+    - Master Audio Transmission: Live configuration of default volume scale (10-100%), 
+      target transcode bitrates (Auto, 128k, 192k HQ, 320k Lossless), and inactivity timers.
+    - Automation & Pipeline Rules: Toggles for Startup Auto-Play (Auto-Join on Boot), 
+      Deck 2 Standby Preloader, and Deck 3 2-step Lookahead Chute.
+    - Live Discord Broadcast Announcer: One-click dropdown binding to any text channel or voice chat.
+    - Hardware & Core Diagnostics: Live RAM allocation (MB), CPU load %, studio session uptime, 
+      SQLite storage stats, and host Python/Discord.py environment specs.
+    - Studio Maintenance: 1-Click actions to flush API & stream caches and wipe session records.
+
 ===============================================================================
 3. CORE ARCHITECTURE & AUDIO ENGINE
 ===============================================================================

@@ -549,3 +549,118 @@ async def api_channel_binding(request: web.Request) -> web.Response:
     })
 
 
+async def api_system_settings(request: web.Request) -> web.Response:
+    """Read or update global bot parameters, audio transmission standards, and system specs."""
+    import psutil, platform, time, discord
+    from app import store
+    from core.config import load_bot_config, save_bot_config
+    bot = request.app.get("bot")
+
+    if request.method == "POST":
+        try:
+            data = await request.json()
+            gid_str = str(data.get("guild_id", ""))
+            key = data.get("key")
+            val = data.get("value")
+            if key:
+                save_bot_config({key: val})
+                if gid_str:
+                    store.save_guild_settings(gid_str, {key: val})
+                    if bot:
+                        try:
+                            g = bot.get_guild(int(gid_str))
+                            if g and hasattr(bot, "player_manager"):
+                                p = bot.player_manager.get_player(g)
+                                if key == "default_volume":
+                                    p.set_volume(float(val))
+                                elif key == "audio_quality":
+                                    p.audio_quality = str(val)
+                        except Exception:
+                            pass
+                return web.json_response({"status": "ok", "saved_key": key, "saved_value": val})
+        except Exception as ex:
+            return web.json_response({"error": str(ex)}, status=400)
+
+    # GET: return system specs and config
+    gid_str = request.query.get("guild_id", "")
+    guild, player = None, None
+    if bot and gid_str:
+        try:
+            guild = bot.get_guild(int(gid_str))
+            if guild and hasattr(bot, "player_manager"):
+                player = bot.player_manager.get_player(guild)
+        except Exception:
+            pass
+
+    proc = psutil.Process()
+    ram_mb = round(proc.memory_info().rss / (1024 * 1024), 1)
+    cpu_pct = proc.cpu_percent(interval=None)
+    proc_uptime = int(time.time() - proc.create_time())
+    h, rem = divmod(proc_uptime, 3600)
+    m, s = divmod(rem, 60)
+    uptime_fmt = f"{h}h {m}m" if h > 0 else f"{m}m {s}s"
+
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "cache.db")
+    db_size_kb = round(os.path.getsize(db_path) / 1024, 1) if os.path.exists(db_path) else 0
+
+    cfg = load_bot_config()
+    g_settings = store.load_guild_settings(gid_str) if gid_str else {}
+
+    channels = []
+    if guild:
+        for c in guild.text_channels:
+            channels.append({"id": str(c.id), "name": f"#{c.name}"})
+        for c in guild.voice_channels:
+            channels.append({"id": str(c.id), "name": f"🔊 {c.name} (Voice Chat)"})
+
+    return web.json_response({
+        "status": "ok",
+        "config": cfg,
+        "guild_settings": g_settings,
+        "text_channels": channels,
+        "system": {
+            "ram_mb": ram_mb,
+            "cpu_pct": cpu_pct,
+            "uptime_seconds": proc_uptime,
+            "uptime_formatted": uptime_fmt,
+            "db_size_kb": db_size_kb,
+            "python_version": platform.python_version(),
+            "host_os": platform.system(),
+            "discord_version": discord.__version__
+        }
+    })
+
+
+async def api_system_action(request: web.Request) -> web.Response:
+    """Execute maintenance and cache actions."""
+    from app import store
+    try:
+        data = await request.json()
+        action = data.get("action")
+        gid_str = str(data.get("guild_id", ""))
+        bot = request.app.get("bot")
+
+        if action == "flush_cache":
+            store.clear_cache()
+            store.clear_stream_resolutions()
+            return web.json_response({"status": "ok", "message": "API & Stream URL cache flushed!"})
+
+        elif action == "clear_history":
+            if gid_str:
+                store.clear_playback_history(gid_str)
+                if bot:
+                    try:
+                        g = bot.get_guild(int(gid_str))
+                        if g and hasattr(bot, "player_manager"):
+                            p = bot.player_manager.get_player(g)
+                            p.history.clear()
+                    except Exception:
+                        pass
+            return web.json_response({"status": "ok", "message": "Session history cleared!"})
+
+        return web.json_response({"error": f"Unknown action: {action}"}, status=400)
+    except Exception as ex:
+        return web.json_response({"error": str(ex)}, status=400)
+
+
+

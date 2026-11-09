@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <title>Album Discovery - Control Hub</title>
+  <title>Album Discovery - Studio Command Center & Master Station</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/static/style.css?v=6.5.0">
   <link rel="stylesheet" href="/static/command_center.css?v=6.5.0">
   <link rel="stylesheet" href="/static/audio_lab.css?v=6.5.0">
+  <link rel="stylesheet" href="/static/studio_settings.css?v=6.5.0">
   <style>
     /* Guaranteed Header & DNA Layout Essentials */
     header { display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 16px; background: rgba(12, 16, 26, 0.95); border-bottom: 1px solid rgba(255,255,255,0.07); }
@@ -52,8 +53,11 @@
     <div class="brand">
       <div class="brand-logo">💿</div>
       <div>
-        <div class="brand-title">Album Discovery Hub</div>
-        <div class="brand-subtitle">Discord Studio Command Center</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="brand-title">Album Discovery</div>
+          <span class="safety-badge" style="background:rgba(168,85,247,0.18); color:#c084fc; border-color:rgba(168,85,247,0.4); font-size:0.62rem; padding:1px 6px;">MASTER STATION</span>
+        </div>
+        <div class="brand-subtitle">Discord Studio Command Center &amp; AI Radio Hub</div>
       </div>
     </div>
 
@@ -196,6 +200,7 @@
         <button class="tab-btn" onclick="switchTab('timemachine', this)">⏳ Time Machine</button>
         <button class="tab-btn" onclick="switchTab('radio', this)">📻 Cloud Radio</button>
         <button class="tab-btn" onclick="switchTab('logs', this)">📜 Logs</button>
+        <button class="tab-btn" onclick="switchTab('settings', this)">⚙️ Settings</button>
       </div>
 
       <!-- Queue Tab -->
@@ -882,6 +887,13 @@
         <pre id="logsContainer" style="background:#0e1017; border:1px solid var(--border-color); padding:14px; border-radius:var(--radius-md); font-family:monospace; font-size:0.76rem; color:#a3e635; overflow-y:auto; flex:1; max-height:450px; white-space:pre-wrap;"></pre>
       </div>
 
+      <!-- Master Studio Settings Tab -->
+      <div class="tab-content" id="tabSettings">
+        <div id="studioSettingsContainer" class="studio-settings-wrap">
+          <!-- Populated dynamically by studio_settings.js -->
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -895,5 +907,6 @@
   <script src="/static/command_center.js?v=6.5.0"></script>
   <script src="/static/audio_lab.js?v=6.5.1"></script>
   <script src="/static/channel_announcer.js?v=6.5.0"></script>
+  <script src="/static/studio_settings.js?v=6.5.0"></script>
 </body>
 </html>

@@ -23,7 +23,7 @@ async function loadChannelAnnouncer() {
       data.text_channels.forEach(ch => {
         const opt = document.createElement("option");
         opt.value = ch.id;
-        opt.textContent = `#${ch.name}`;
+        opt.textContent = ch.name;
         if (ch.id === currentBoundChannelId) {
           opt.selected = true;
         }

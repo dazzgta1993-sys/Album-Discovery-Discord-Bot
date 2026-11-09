@@ -535,7 +535,11 @@ async def api_channel_binding(request: web.Request) -> web.Response:
 
     bound_id = get_bound_channel_id(player)
     bound_ch = guild.get_channel(int(bound_id)) if bound_id else None
-    channels = [{"id": str(c.id), "name": c.name} for c in guild.text_channels]
+    channels = []
+    for c in guild.text_channels:
+        channels.append({"id": str(c.id), "name": f"#{c.name}"})
+    for c in guild.voice_channels:
+        channels.append({"id": str(c.id), "name": f"🔊 {c.name} (Voice Chat)"})
 
     return web.json_response({
         "status": "ok",

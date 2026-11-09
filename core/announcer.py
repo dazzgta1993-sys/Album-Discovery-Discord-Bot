@@ -37,7 +37,7 @@ def get_target_channel(player) -> Optional[discord.TextChannel]:
     if ch_id:
         try:
             ch = player.guild.get_channel(int(ch_id))
-            if isinstance(ch, discord.TextChannel):
+            if hasattr(ch, "send"):
                 player.text_channel = ch
                 return ch
         except (ValueError, TypeError):
